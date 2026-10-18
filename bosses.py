@@ -104,55 +104,168 @@ class Boss:
             art.text(self.cx - 2, self.y - 26, "!", RED)
 
 
+def seg_dist(px, py, x1, y1, x2, y2):
+    """How far the point (px, py) is from the line from (x1, y1) to (x2, y2)."""
+    dx, dy = x2 - x1, y2 - y1
+    k = clamp(((px - x1) * dx + (py - y1) * dy) / (dx * dx + dy * dy or 1), 0, 1)
+    return math.hypot(px - (x1 + k * dx), py - (y1 + k * dy))
+
+
 class MoneyCat(Boss):
-    """Throws coins, steals your coins with his lucky paw, and gets
-    stronger with every coin he takes."""
+    """The lucky cat. He fires laser coins and red lucky beams from his
+    waving paw, and a gold greedy beam from the big coin he holds. Between attacks he rests. That is
+    when you throw things at him!"""
     name = "MONEY CAT"
+    PATTERNS = ["coins", "beam", "ring", "greedy"]
+    SHOUTS = {"coins": "LASER COINS!", "beam": "LUCKY BEAM!", "ring": "COIN RING!",
+              "greedy": "GREEDY BEAM!"}
 
     def __init__(self, g, x, hard):
         super().__init__(g, x, hard, 26 if hard else 18, 28, 30)
-        self.vx = 0.8 if hard else 0.6
         self.wave = 0.0
-        self.winding = 0
-        self.rain = 0
+        self.state = "warn"
+        self.timer = 50
+        self.n = 0
+        self.rings = 0
+        self.beam = None     # [x1, y1, x2, y2, frames left, "aim" or "fire", kind]
+        self.beams_left = 0
+        self.home = x
+
+    @property
+    def pattern(self):
+        return self.PATTERNS[self.n % len(self.PATTERNS)]
+
+    def paw(self):
+        """Where his raised, waving paw is."""
+        dx = 1 if self.facing > 0 else 30
+        return self.x - 2 + dx, self.y - 3 + (math.sin(self.wave) + 1) * 1.5
+
+    def coin(self):
+        """Where the big gold coin he holds is."""
+        dx = 24 if self.facing > 0 else 7
+        return self.x - 2 + dx, self.y - 4 + 25
+
+    def laser_coin(self, x, y, angle, speed=2.4):
+        s = Shot("lasercoin", x - 3, y - 3, 6, 6,
+                 math.cos(angle) * speed, math.sin(angle) * speed, 0, 400)
+        s.bx, s.by = s.x, s.y
+        self.g.shots.append(s)
 
     def think(self):
         g = self.g
-        self.face_player()
-        self.wave += 0.5 if self.winding else 0.15
+        p = g.player
         self.physics()
-        if self.x < 50 or self.x > 205:
-            self.vx = -self.vx
-            self.x = clamp(self.x, 50, 205)
-        if self.on_ground and self.every(170):
-            self.vy = -4.5
-            self.vx = sign(g.player.cx - self.cx) * abs(self.vx)
-        if self.every(70):
-            n = 5 if self.angry or self.hard else 3
-            for i in range(n):
-                g.shots.append(Shot("coin", self.cx - 3, self.y + 6, 7, 8,
-                                    self.facing * (0.8 + i * 0.6), -3.8 + i * 0.3, 0.15))
-            sounds.sfx(sounds.COIN)
-        if self.every(240) and not self.winding:
-            self.winding = 45
-            g.float_text(self.cx, self.y - 8, "LUCKY PAW!", GOLD)
-        if self.winding:
-            self.winding -= 1
-            if self.winding == 0:
-                speed = 2.4 if self.hard else 1.9
-                g.shots.append(Shot("paw", self.cx - 6, self.y + 8, 12, 12,
-                                    self.facing * speed, 0, 0, 220))
-                if self.angry or self.hard:
-                    g.shots.append(Shot("paw", self.cx - 6, self.y - 16, 12, 12,
-                                        self.facing * speed * 0.8, -0.6, 0, 220))
-                sounds.sfx(sounds.STEAL)
-        if self.angry:
-            self.rain += 1
-            if self.rain % 420 == 1:
-                g.banner("COIN STORM!", "", 60)
-                for _ in range(8):
-                    g.shots.append(Shot("coin", random.uniform(16, 232), random.uniform(-60, -8),
-                                        7, 8, 0, 0, 0.12))
+        if self.on_ground:
+            self.vx = 0
+        self.timer -= 1
+        busy = self.state == "fire"
+        self.wave += 0.45 if busy else 0.12
+        if self.state != "fire" or self.pattern != "greedy":
+            self.face_player()
+
+        if self.state == "warn":
+            if self.timer <= 0:
+                self.state = "fire"
+                self.timer = {"coins": 150, "beam": 0, "ring": 130, "greedy": 0}[self.pattern]
+                self.rings = 0
+                g.float_text(self.cx, self.y - 30, self.SHOUTS[self.pattern], GOLD)
+                if self.pattern == "beam":
+                    self.beams_left = 2 if self.angry or self.hard else 1
+                    self.start_beam("lucky")
+                elif self.pattern == "greedy":
+                    self.start_beam("greedy")
+            return
+        if self.state == "rest":
+            if self.on_ground and self.timer == 70:
+                # hop to the other side of the room
+                self.home = 40 if self.home > 120 else 190
+                self.vy = -4.5
+                self.vx = (self.home - self.x) / 30
+            if self.timer <= 0:
+                self.n += 1
+                self.state = "warn"
+                self.timer = 40
+            return
+
+        # ---- firing
+        pat = self.pattern
+        if pat == "coins":
+            every = 14 if self.angry else 20
+            if self.timer % every == 0:
+                px, py = self.paw()
+                aim = math.atan2(p.y + p.h / 2 - py, p.cx - px)
+                spread = (-0.3, 0, 0.3) if self.angry or self.hard else (0,)
+                for off in spread:
+                    self.laser_coin(px, py, aim + off)
+                sounds.sfx(sounds.ZAP)
+        elif pat == "ring":
+            if self.timer % 40 == 0:
+                self.rings += 1
+                n = 14 if self.angry else 10
+                off = (self.rings % 2) * math.pi / n
+                cx, cy = self.cx, self.y + 12
+                for k in range(n):
+                    self.laser_coin(cx, cy, off + k * math.tau / n, 1.3)
+                sounds.sfx(sounds.COIN)
+        elif self.beam:
+            self.update_beam()
+            return
+        if self.timer <= 0:
+            self.rest()
+
+    def rest(self):
+        self.state = "rest"
+        self.timer = 75 if self.angry else 105
+        self.beam = None
+        self.g.float_text(self.cx, self.y - 30, "PURR...", LPINK)
+
+    def start_beam(self, kind):
+        x1, y1 = self.paw()
+        if kind == "greedy":
+            y1 = GROUND_Y - 7
+            x2 = 248 if self.facing > 0 else 8
+            self.beam = [self.cx, y1, x2, y1, 55, "aim", kind]
+        else:
+            self.beam = [x1, y1, x1, y1, 50, "aim", kind]
+        sounds.sfx(sounds.SELECT)
+
+    def update_beam(self):
+        g = self.g
+        p = g.player
+        b = self.beam
+        b[4] -= 1
+        if b[5] == "aim":
+            if b[6] == "lucky":
+                b[0], b[1] = self.paw()
+                if b[4] > 15:      # follow the bunny, then lock on
+                    ang = math.atan2(p.y + p.h / 2 - b[1], p.cx - b[0])
+                    b[2], b[3] = b[0] + math.cos(ang) * 400, b[1] + math.sin(ang) * 400
+            if b[4] <= 0:
+                b[5] = "fire"
+                b[4] = 28
+                g.shake = 6
+                sounds.sfx(sounds.BOOM)
+            return
+        # fire!
+        if b[6] == "greedy":
+            b[0] = self.cx      # the beam sweeps out across the floor
+            reach = 28 - b[4]
+            b[2] = self.cx + self.facing * min(240, reach * 18)
+            lo, hi = sorted((b[0], b[2]))
+            if lo < p.cx < hi and p.y + p.h > GROUND_Y - 12 and not p.invuln:
+                g.steal_coins()
+                p.invuln = 60
+        else:
+            if seg_dist(p.cx, p.y + p.h / 2, *b[:4]) < 8:
+                p.hurt(g, b[0])
+        if b[4] % 6 == 0:
+            g.sparkle(b[2] if b[6] == "greedy" else b[0], b[3], YELLOW)
+        if b[4] <= 0:
+            self.beams_left -= 1
+            if b[6] == "lucky" and self.beams_left > 0:
+                self.start_beam("lucky")
+            else:
+                self.rest()
 
     def took_coins(self, n):
         """Every 5 coins he takes heals him a little."""
@@ -160,11 +273,69 @@ class MoneyCat(Boss):
             self.hp = min(self.max_hp, self.hp + max(1, n // 5))
             self.g.float_text(self.cx, self.y - 16, "MORE MONEY, MORE POWER!", GOLD)
 
+    def draw_beam(self, t):
+        b = self.beam
+        if not b:
+            return
+        x1, y1, x2, y2, left, mode, kind = b
+        pyxel.clip(8, 0, 240, GROUND_Y)
+        if mode == "aim":
+            # a blinking dotted line shows where the beam will go
+            if kind == "lucky" and (left > 15 or t % 4 < 2):
+                # thick moving dashes, gold while aiming, red when locked on
+                col = GOLD if left > 15 else RED
+                length = math.hypot(x2 - x1, y2 - y1) or 1
+                ux, uy = (x2 - x1) / length, (y2 - y1) / length
+                for d in range(int(t % 10), int(length), 10):
+                    ax, ay = x1 + ux * d, y1 + uy * d
+                    for o in (-1, 0, 1):
+                        pyxel.line(ax - uy * o, ay + ux * o, ax + ux * 5 - uy * o, ay + uy * 5 + ux * o, col)
+                if left <= 15:
+                    p = self.g.player
+                    pyxel.circb(p.cx, p.y + p.h / 2, 9, RED)
+                    pyxel.line(p.cx - 12, p.y + p.h / 2, p.cx + 12, p.y + p.h / 2, RED)
+            elif kind == "greedy":
+                # the floor glows where the greedy beam will go
+                lo, hi = (x1, x2) if x1 < x2 else (x2, x1)
+                pyxel.dither(0.5 if t % 8 < 4 else 0.25)
+                pyxel.rect(lo, y1 - 5, hi - lo, 10, GOLD)
+                pyxel.dither(1.0)
+                pyxel.rectb(lo, y1 - 5, hi - lo, 10, YELLOW if t % 8 < 4 else ORANGE)
+                for ax in range(int(lo) + 8, int(hi), 24):
+                    art.draw_coin(ax, y1 - 4, t)
+        else:
+            dx, dy = x2 - x1, y2 - y1
+            length = math.hypot(dx, dy) or 1
+            nx, ny = -dy / length, dx / length
+            # lucky beams are lucky red, greedy beams are gold
+            cols = (RED, HOTPINK, WHITE) if kind == "lucky" else (GOLD, YELLOW, WHITE)
+            for half, col in zip((5, 3, 1), cols):
+                hx, hy = nx * half, ny * half
+                pyxel.tri(x1 + hx, y1 + hy, x2 + hx, y2 + hy, x1 - hx, y1 - hy, col)
+                pyxel.tri(x2 + hx, y2 + hy, x2 - hx, y2 - hy, x1 - hx, y1 - hy, col)
+            # spinning coins ride along the beam
+            for d in range(int((t * 4) % 16), int(length), 16):
+                cx, cy = x1 + dx / length * d, y1 + dy / length * d
+                w = 2 + abs(math.sin(t * 0.3 + d)) * 5
+                pyxel.elli(cx - w / 2, cy - 4, w, 8, ORANGE)
+                pyxel.elli(cx - w / 2 + 1, cy - 3, max(1, w - 2), 6, YELLOW)
+        pyxel.clip()
+
     def draw(self, t):
+        self.draw_beam(t)
         if self.visible(t):
             art.draw_money_cat(self.x - 2, self.y - 4, t, self.wave, self.facing, self.angry)
-            if self.winding:
+            b = self.beam
+            if b and b[5] == "aim":
+                # his paw or coin glows while he charges up
+                lucky = b[6] == "lucky"
+                gx, gy = self.paw() if lucky else self.coin()
+                pyxel.circb(gx, gy, 3 + (t // 3) % 3, RED if lucky else YELLOW)
+                pyxel.circb(gx, gy, 5 + (t // 3) % 3, HOTPINK if lucky else ORANGE)
+            if self.state == "warn":
                 self.warn(t)
+            if self.state == "rest" and t % 40 < 20:
+                art.text(self.cx + 8, self.y - 8, "z", LPINK)
 
 
 class Eggbert(Boss):

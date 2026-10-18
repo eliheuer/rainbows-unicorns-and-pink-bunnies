@@ -79,7 +79,7 @@ it gets angry and attacks faster.
 
 | Level | Boss | Tip |
 |---|---|---|
-| 8 | Money Cat | His lucky paw takes your coins. Zap the paw. |
+| 8 | Money Cat | He shoots laser coins and laser beams. The gold Greedy Beam takes your coins, so jump over it. Hit him when he rests. |
 | 16 | Eggbert | Jump on an egg, pick it up, and throw it back. |
 | 24 | The Black Bunny | He hops on you. Jump over his shockwaves. |
 | 32 | Tornado Bunny | Zap the tornadoes. Hold Up to zap up high. |

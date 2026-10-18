@@ -658,7 +658,7 @@ class Shot:
                 if self.kind == "tornado" and not self.landed:
                     self.landed = True
                     self.vx = sign(p.cx - self.x) * 0.8
-        elif self.kind == "orb":
+        elif self.kind in ("orb", "lasercoin"):
             # bullet-hell fire: can turn (curve) and wiggle (wave) as it flies
             if self.curve:
                 c, s = math.cos(self.curve), math.sin(self.curve)
@@ -700,6 +700,16 @@ class Shot:
         elif self.kind == "orb":
             pyxel.circ(x + 2, y + 2, 3, self.col)
             pyxel.circ(x + 2, y + 2, 1, WHITE)
+        elif self.kind == "lasercoin":
+            # a spinning gold coin with a laser streak behind it
+            sp = math.hypot(self.vx, self.vy) or 1
+            tx, ty = x + 3 - self.vx / sp * 12, y + 3 - self.vy / sp * 12
+            pyxel.line(x + 3, y + 3, tx, ty, ORANGE)
+            pyxel.line(x + 3, y + 3, (x + 3 + tx) / 2, (y + 3 + ty) / 2, YELLOW)
+            w = 2 + abs(math.sin(self.t * 0.3)) * 5
+            pyxel.elli(x + 3 - w / 2, y - 1, w, 8, ORANGE)
+            pyxel.elli(x + 4 - w / 2, y, max(1, w - 2), 6, YELLOW)
+            pyxel.pset(x + 3, y + 1, WHITE)
         elif self.kind == "rock":
             pyxel.circ(x + 3, y + 3, 3, LAV)
             pyxel.circb(x + 3, y + 3, 3, SKY)

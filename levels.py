@@ -49,7 +49,7 @@ BOSS_NAMES = {
 }
 
 BOSS_TIPS = {
-    "moneycat": "DON'T LET HIS PAW TAKE YOUR COINS!",
+    "moneycat": "DODGE THE LASERS! HIT HIM WHEN HE RESTS!",
     "eggbert": "JUMP ON AN EGG, PICK IT UP, THROW IT BACK!",
     "blackbunny": "JUMP OVER THE SHOCKWAVES!",
     "tornado": "ZAP THE TORNADOES! HOLD UP TO AIM HIGH!",

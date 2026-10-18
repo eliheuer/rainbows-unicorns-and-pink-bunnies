@@ -343,7 +343,7 @@ class Play:
         if cat:
             cat.took_coins(take)
         if take:
-            self.banner(f"MONEY CAT TOOK {take} COINS!", "ZAP HIS PAW NEXT TIME!", 90)
+            self.banner(f"MONEY CAT TOOK {take} COINS!", "JUMP OVER THE GREEDY BEAM!", 90)
         else:
             self.float_text(p.cx, p.y - 10, "NO COINS TO TAKE! HA!", YELLOW)
 
