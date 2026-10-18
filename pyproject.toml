@@ -1,0 +1,9 @@
+[project]
+name = "rainbows-unicorns-and-pink-bunnies"
+version = "0.1.0"
+description = "A 2D platform game made with Pyxel: a pink bunny with lightning powers saves the carrots."
+requires-python = ">=3.13"
+license = "GPL-3.0-or-later"
+dependencies = [
+    "pyxel>=2.9.9",
+]

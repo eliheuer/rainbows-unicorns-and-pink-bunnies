@@ -1,0 +1,105 @@
+# Rainbows, Unicorns, and Pink Bunnies
+
+A 2D platform game made with [Pyxel](https://github.com/kitao/pyxel).
+You are a pink bunny with lightning powers and super speed.
+Carrot Boom, a white bunny, wants to steal all the carrots in the world.
+His pig friends want to eat them. Stop them and save the carrots!
+
+## Play the game
+
+You need [uv](https://docs.astral.sh/uv/). uv installs Python and Pyxel for you.
+
+1. Install uv (Linux or macOS):
+
+   ```sh
+   curl -LsSf https://astral.sh/uv/install.sh | sh
+   ```
+
+2. Get the game:
+
+   ```sh
+   git clone https://github.com/eliheuer/rainbows-unicorns-and-pink-bunnies.git
+   cd rainbows-unicorns-and-pink-bunnies
+   ```
+
+3. Play:
+
+   ```sh
+   uv run main.py
+   ```
+
+To get the newest version of the game, run `git pull` in the game folder.
+
+## Controls
+
+| Key | Gamepad | What it does |
+|---|---|---|
+| Arrows or WASD | D-pad | Run and climb vines |
+| Z or Space | A | Jump |
+| X | X | Lightning zap. Hold Up to zap up high. |
+| C | B | Pull up a plant, pick up a pig, or throw what you carry |
+| Down, then jump | Down, then A | Super jump. Hold Down until the bunny flashes. |
+| Enter or Esc | Start | Pause |
+
+When you carry something, hold Up to throw it high. Hold Down to put it down.
+
+## How the game works
+
+The game has 64 levels in 8 worlds. When you beat a level, the next level
+unlocks. The game saves your progress in `save.json`. On the level grid,
+you can pick any level that you unlocked.
+
+Each level has 3 carrots. Pigs eat carrots when they walk into them, so get
+the carrots first. The orange dots on the level grid show your best score.
+
+The game is like Super Mario Bros. 2:
+
+- You do not stomp on pigs. You stand on them, pick them up, and throw them.
+- Pull up plants to get turnips to throw. Some plants have coins or prizes.
+- You have hearts. A hit takes one heart away.
+
+If you keep running fast, you get super speed, like Sonic. With super speed,
+you knock out pigs when you run into them.
+
+## Power-ups
+
+| Power-up | What it does |
+|---|---|
+| Lightning ball | Makes your zap stronger. Level 2 zaps go through pigs. Level 3 shoots 3 zaps. |
+| Unicorn | You ride a unicorn for 10 seconds. Hold Jump to fly. Nothing can hurt you. |
+| Heart | Gives back one heart. If your hearts are full, you get a new heart. |
+
+## Bosses
+
+Every 8th level has a boss. Lightning does only 1 damage to a boss.
+Throw things at bosses to do 3 damage. When a boss has half of its health,
+it gets angry and attacks faster.
+
+| Level | Boss | Tip |
+|---|---|---|
+| 8 | Money Cat | His lucky paw takes your coins. Zap the paw. |
+| 16 | Eggbert | Jump on an egg, pick it up, and throw it back. |
+| 24 | The Black Bunny | He hops on you. Jump over his shockwaves. |
+| 32 | Tornado Bunny | Zap the tornadoes. Hold Up to zap up high. |
+| 40 | Money Cat again | He is faster and takes more coins. |
+| 48 | Eggbert again | She also spits fireballs. You cannot catch fireballs. |
+| 56 | Black Bunny and Tornado Bunny | Both at the same time! |
+| 64 | Carrot Boom | Throw his carrot bombs back at him. |
+
+## Change the game
+
+| File | What is in it |
+|---|---|
+| `main.py` | Title screen, level grid, and ending |
+| `game.py` | What happens in a level |
+| `entities.py` | The bunny, pigs, items, and power-ups. Speed and jump numbers are at the top. |
+| `bosses.py` | The bosses |
+| `levels.py` | How the levels are built, the worlds, and the boss list |
+| `art.py` | How everything looks |
+| `sounds.py` | Sound effects and music |
+
+To start over, delete `save.json`.
+
+## License
+
+This game is free software under the GNU General Public License, version 3 or later. See `LICENSE`.
