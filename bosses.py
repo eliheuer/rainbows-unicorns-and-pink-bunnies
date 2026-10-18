@@ -7,7 +7,7 @@ import pyxel
 import art
 import sounds
 from consts import *
-from entities import Item, Shot
+from entities import Item, Particle, Pig, Shot
 
 GROUND_Y = 17 * T   # the floor of every boss room
 
@@ -58,6 +58,19 @@ class Boss:
             self.angry = True
             self.g.banner(f"{self.name} IS ANGRY!", "WATCH OUT!", 90)
         return True
+
+    beaten_msg = None    # (title, subtitle) shown when you win, if not the usual one
+
+    def hit(self, dmg, how, obj=None):
+        """Something hit the boss. how is "zap", "throw", "boom" or "stomp"."""
+        return self.hurt(dmg)
+
+    def catch_bolt(self, b):
+        """Return True if the boss blocks this lightning bolt in a special way."""
+        return False
+
+    def stomped(self):
+        """The bunny bounced on the boss's head."""
 
     def face_player(self):
         self.facing = sign(self.g.player.cx - self.cx) or self.facing
@@ -405,6 +418,348 @@ class CarrotBoom(Boss):
                 self.warn(t)
 
 
+class Scarecrow(Boss):
+    """Bounces on his pole, sends packs of crows, and lobs pumpkins
+    that you can pick up and throw back."""
+    name = "THE SCARECROW"
+
+    def __init__(self, g, x, hard):
+        super().__init__(g, x, hard, 24, 24, 40)
+        self.target = x
+        self.calling = 0
+
+    def think(self):
+        g = self.g
+        self.face_player()
+        landed = self.physics()
+        if self.on_ground:
+            self.vx = 0
+        if landed:
+            sounds.sfx(sounds.BOUNCE)
+            g.puff(self.cx, GROUND_Y, YELLOW)
+        if self.on_ground and self.every(45):
+            # boing! hop toward a new spot
+            if abs(self.target - self.x) < 12 or random.random() < 0.3:
+                self.target = random.uniform(40, 190)
+            self.vy = -4.5 if not self.angry else -5.5
+            self.vx = clamp((self.target - self.x) / 30, -1.8, 1.8)
+        if self.every(100):
+            n = 2 if self.angry else 1
+            for i in range(n):
+                pk = Item("pumpkin", self.cx - 6, self.y + 6, state="thrown")
+                pk.owner = "boss"
+                pk.vx = clamp((g.player.cx - self.cx) / 50, -3.2, 3.2) + (i - (n - 1) / 2) * 1.4
+                pk.vy = -4.5
+                g.items.append(pk)
+            sounds.sfx(sounds.THROW)
+            resting = [o for o in g.items if o.kind == "pumpkin" and o.state == "rest"]
+            for o in resting[:-3]:
+                o.poof(g)
+        if self.every(260) and not self.calling:
+            self.calling = 40
+            g.float_text(self.cx, self.y - 14, "CAW CAW! GET HER, CROWS!", WHITE)
+        if self.calling:
+            self.calling -= 1
+            if self.calling == 0:
+                self.send_crows()
+
+    def send_crows(self):
+        g = self.g
+        n = 5 if self.angry or self.hard else 3
+        side = random.choice((-1, 1))
+        for i in range(n):
+            x = (24 if side < 0 else 220) + side * -i * 16
+            c = Pig(x, -12, "crow", 0)
+            c.minion = True
+            c.awake = True
+            c.base_y = 14 + (i % 2) * 10
+            c.cool = 20 + i * 14
+            g.pigs.append(c)
+        sounds.sfx(sounds.SPEED)
+
+    def draw(self, t):
+        if self.visible(t):
+            art.draw_scarecrow(self.x - 4, self.y - 4, t, not self.on_ground, self.angry)
+            if self.calling:
+                self.warn(t)
+
+
+class PinkFireball(Boss):
+    """A bullet-hell boss. She fills the sky with fire in pretty math
+    patterns, then rests down low. That is when you hit her!"""
+    name = "THE PINK FIREBALL"
+    PATTERNS = ["spiral", "waves", "rings", "flower"]
+    SHOUTS = {"spiral": "SPIRAL!", "waves": "SINE WAVES!", "rings": "RING OF FIRE!",
+              "flower": "FIRE FLOWER!"}
+
+    def __init__(self, g, x, hard):
+        super().__init__(g, x, hard, 22, 20, 20)
+        self.y = 50
+        self.state = "warn"
+        self.timer = 40
+        self.n = 0
+        self.a = 0.0
+        self.shots_made = 0
+
+    @property
+    def pattern(self):
+        return self.PATTERNS[self.n % len(self.PATTERNS)]
+
+    def orb(self, angle, speed, wave=0.0, wave_f=0.15, curve=0.0, col=HOTPINK):
+        s = Shot("orb", self.cx - 2, self.y + self.h / 2 - 2, 4, 4,
+                 math.cos(angle) * speed, math.sin(angle) * speed, 0, 500)
+        s.bx, s.by = s.x, s.y
+        s.wave, s.wave_f, s.curve, s.col = wave, wave_f, curve, col
+        self.g.shots.append(s)
+
+    def think(self):
+        g = self.g
+        self.face_player()
+        self.timer -= 1
+        t = self.t
+        if self.state == "rest":
+            tx, ty = 118, GROUND_Y - 46 + math.sin(t * 0.05) * 4
+        else:
+            tx = 118 + math.sin(t * 0.013) * 85
+            ty = 46 + math.sin(t * 0.027) * 20
+        self.x += (tx - self.x) * 0.04
+        self.y += (ty - self.y) * 0.04
+        if self.t % 3 == 0:
+            g.particles.append(Particle(self.cx + random.uniform(-6, 6), self.y + self.h,
+                                        0, 0.6, 14, random.choice([PINK, HOTPINK, LPINK]), 2))
+        if self.state == "warn":
+            if self.timer <= 0:
+                self.state = "fire"
+                self.timer = 260 if self.angry else 220
+                g.float_text(self.cx, self.y - 14, self.SHOUTS[self.pattern], HOTPINK)
+            return
+        if self.state == "rest":
+            if self.timer <= 0:
+                self.n += 1
+                self.state = "warn"
+                self.timer = 40
+            return
+        if self.timer <= 0:
+            self.state = "rest"
+            self.timer = 80 if self.angry else 110
+            g.float_text(self.cx, self.y - 14, "PANT... PANT...", LPINK)
+            return
+        self.fire()
+
+    def fire(self):
+        p = self.g.player
+        f = self.fury
+        pat = self.pattern
+        aim = math.atan2(p.y + p.h / 2 - (self.y + self.h / 2), p.cx - self.cx)
+        if pat == "spiral" and self.t % max(3, int(6 / f)) == 0:
+            arms = 3 if self.angry else 2
+            for k in range(arms):
+                self.orb(self.a + k * math.tau / arms, 1.2)
+            self.a += 0.31
+        elif pat == "waves" and self.t % max(8, int(16 / f)) == 0:
+            spread = (-0.4, 0, 0.4) if self.angry or self.hard else (-0.25, 0.25)
+            for off in spread:
+                self.orb(aim + off, 1.3, wave=12, wave_f=0.14, col=PURPLE)
+        elif pat == "rings" and self.t % max(24, int(46 / f)) == 0:
+            n = 16 if self.angry else 12
+            self.shots_made += 1
+            off = (self.shots_made % 2) * math.pi / n
+            for k in range(n):
+                self.orb(off + k * math.tau / n, 1.1, col=PINK)
+        elif pat == "flower" and self.t % max(4, int(7 / f)) == 0:
+            turn = 1 if (self.t // 60) % 2 else -1
+            self.orb(self.a, 1.15, curve=0.016 * turn, col=LPINK)
+            self.orb(self.a + math.pi, 1.15, curve=0.016 * turn, col=LPINK)
+            self.a += 0.5
+        else:
+            return
+        if self.t % 12 == 0:
+            sounds.sfx(sounds.ZAP)
+
+    def draw(self, t):
+        if self.visible(t):
+            art.draw_pink_fireball(self.x - 2, self.y - 2, t, self.angry, self.state == "rest")
+            if self.state == "warn":
+                self.warn(t)
+
+
+class MoonBunny(Boss):
+    """The Moon Bunny from Bunny Madness!
+    1. She hides behind spinning moon rocks. Zap the rocks.
+    2. She turns invisible. Watch her shadow and throw things at her.
+    3. She puts on a moon rock helmet and charges. Jump on her head!"""
+    name = "THE MOON BUNNY"
+    beaten_msg = ("THE MOON BUNNY GIVES UP!", "SHE ONLY WANTED TO PLAY!")
+    ROCKS = 4
+    BONKS = 3
+    HEAD_HITS = 2
+
+    def __init__(self, g, x, hard):
+        super().__init__(g, x, hard, self.ROCKS + self.BONKS + self.HEAD_HITS, 22, 26)
+        self.x, self.y = 195, 14
+        self.phase = 0
+        self.spin = 0.0
+        self.shield = list(range(self.ROCKS))
+        self.timer = 70
+        self.vx = -0.9
+        self.seen = 0
+        self.clang = 0
+
+    def rock_pos(self, i):
+        a = self.spin + i * math.tau / self.ROCKS
+        return self.cx + math.cos(a) * 26, self.y + 13 + math.sin(a) * 26
+
+    def say(self, msg, c=WHITE):
+        if self.clang == 0:
+            self.clang = 60
+            self.g.float_text(self.cx, self.y - 22, msg, c)
+
+    def catch_bolt(self, b):
+        g = self.g
+        if self.phase == 1:
+            for i in list(self.shield):
+                rx, ry = self.rock_pos(i)
+                if b.x - 4 < rx < b.x + b.w + 4 and b.y - 4 < ry < b.y + b.h + 4:
+                    self.shield.remove(i)
+                    self.hp -= 1
+                    for _ in range(10):
+                        g.sparkle(rx, ry, random.choice([LAV, SKY, WHITE]))
+                    sounds.sfx(sounds.BOSS_HIT)
+                    if self.shield:
+                        g.float_text(rx, ry - 8, f"CRACK! {len(self.shield)} MORE!", SKY)
+                    else:
+                        self.phase = 2
+                        self.flash = 45
+                        g.banner("POOF! SHE VANISHED!", "WATCH HER SHADOW! THROW THINGS AT HER!", 120)
+                    return True
+        if self.phase == 2 and overlap(b, self):
+            self.seen = 50
+            self.say("THERE SHE IS!", SKY)
+            return True
+        return False
+
+    def hit(self, dmg, how, obj=None):
+        g = self.g
+        if self.flash or self.phase == 0 or self.dead:
+            return False
+        if self.phase == 1:
+            self.say("CLANG! ZAP HER MOON ROCKS!")
+            return False
+        if self.phase == 2:
+            if how not in ("throw", "boom"):
+                return False
+            self.hp -= 1
+            self.flash = 45
+            self.seen = 45
+            self.y = max(18, self.y - 22)
+            self.vx = -self.vx
+            sounds.sfx(sounds.BOSS_HIT)
+            if self.hp > self.HEAD_HITS:
+                g.float_text(self.cx, self.y - 20, f"BONK! {self.hp - self.HEAD_HITS} MORE!", WHITE)
+            else:
+                self.phase = 3
+                self.flash = 50
+                self.timer = 40
+                self.vx = 2.5 if g.player.cx < self.cx else -2.5
+                g.banner("A MOON ROCK HELMET!", "JUMP ON HER HEAD!", 120)
+            return True
+        # phase 3: only hits from above count
+        from_above = how == "stomp" or (obj is not None and obj.vy > 0
+                                         and obj.y + obj.h < self.y + 10)
+        if not from_above:
+            self.say("CLANG! HIT HER FROM ABOVE!")
+            return False
+        self.hp -= 1
+        self.flash = 50
+        sounds.sfx(sounds.BOSS_HIT)
+        if self.hp <= 0:
+            self.dead = True
+            g.boss_defeated(self)
+        else:
+            g.float_text(self.cx, self.y - 20, f"BONK! {self.hp} MORE!", WHITE)
+        return True
+
+    def stomped(self):
+        self.hit(1, "stomp")
+
+    def think(self):
+        g = self.g
+        p = g.player
+        self.spin += 0.045 * self.fury
+        if self.seen:
+            self.seen -= 1
+        if self.clang:
+            self.clang -= 1
+        self.face_player()
+        if self.phase == 0:
+            # she climbs out of the cracked moon
+            self.y += 0.5
+            self.x += (150 - self.x) * 0.01
+            if self.y >= 32:
+                self.phase = 1
+                self.timer = 70
+                g.banner("THE MOON BUNNY!", "ZAP HER MOON ROCKS WITH LIGHTNING!", 120)
+            return
+        if self.phase in (1, 2):
+            self.x += self.vx
+            if self.x < 12 or self.x > 222:
+                self.vx = -self.vx
+                self.x = clamp(self.x, 12, 222)
+            chase = 0.03 if self.phase == 2 else 0.02
+            self.x += clamp((p.cx - self.cx) * chase, -0.9, 0.9)
+            home = 32 if self.phase == 1 else 70
+            self.y += (home + math.sin(self.t / 24) * 9 - self.y) * 0.06
+            self.timer -= 1
+            if self.timer <= 0:
+                self.timer = int((75 if self.phase == 1 else 95) / self.fury)
+                aim = clamp((p.cx - self.cx) * 0.02, -1.2, 1.2)
+                g.shots.append(Shot("rock", self.cx - 3, self.y + 26, 6, 6, aim, 0, 0.27, 300))
+                sounds.sfx(sounds.THROW)
+        else:
+            floor = GROUND_Y - self.h
+            self.y = min(self.y + 2, floor)
+            self.timer -= 1
+            if self.y >= floor and self.timer <= 0:
+                self.x += self.vx * (1.2 if self.hard else 1)
+                if self.x < 10 or self.x > 224:
+                    self.x = clamp(self.x, 10, 224)
+                    self.vx = -self.vx
+                    self.timer = 30
+                    sounds.sfx(sounds.BOUNCE)
+                    g.puff(self.cx, GROUND_Y, LAV)
+
+    def draw(self, t):
+        g = self.g
+        if self.phase == 0:
+            # the moon cracks open!
+            pyxel.circ(206, 30, 11, CREAM)
+            pyxel.line(200, 22, 205, 30, DGRAY)
+            pyxel.line(205, 30, 202, 37, DGRAY)
+            pyxel.line(205, 30, 213, 27, DGRAY)
+        if self.phase in (1, 2):
+            pyxel.elli(self.cx - 11, GROUND_Y - 2, 22, 5, BLACK)
+        shimmer = t % 90 < 5
+        seen = self.phase != 2 or self.seen > 0 or self.flash > 0 or shimmer
+        if seen and self.visible(t):
+            if self.phase == 2 and shimmer and not self.seen:
+                pyxel.dither(0.4)
+            pyxel.circb(self.cx, self.y + 13, 20 + (t // 6) % 3, BLUE if self.phase == 2 else SKY)
+            art.draw_moon_bunny(self.x - 5, self.y - 4, self.facing)
+            if self.phase == 3:
+                hx, hy = self.x, self.y - 1
+                pyxel.rect(hx, hy, 22, 6, LAV)
+                pyxel.rectb(hx, hy, 22, 6, SKY)
+                pyxel.pset(hx + 4, hy + 2, WHITE)
+                if g.player.y + g.player.h <= self.y + 4:
+                    pyxel.circb(self.cx, hy + 3, 9 + (t // 4) % 3, YELLOW)
+            pyxel.dither(1.0)
+        for i in self.shield if self.phase >= 1 else []:
+            rx, ry = self.rock_pos(i)
+            pyxel.circ(rx, ry, 4, LAV)
+            pyxel.circb(rx, ry, 4, SKY)
+            pyxel.pset(rx - 1, ry - 1, WHITE)
+
+
 def make(kind, g, hard, twin=False):
     if kind == "moneycat":
         return MoneyCat(g, 190, hard)
@@ -414,4 +769,10 @@ def make(kind, g, hard, twin=False):
         return BlackBunny(g, 140 if twin else 190, hard, twin)
     if kind == "tornado":
         return TornadoBunny(g, 100 if twin else 160, hard, twin)
+    if kind == "scarecrow":
+        return Scarecrow(g, 180, hard)
+    if kind == "pinkfire":
+        return PinkFireball(g, 150, hard)
+    if kind == "moonbunny":
+        return MoonBunny(g, 195, hard)
     return CarrotBoom(g, 190, hard)

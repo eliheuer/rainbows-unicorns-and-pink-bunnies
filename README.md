@@ -58,6 +58,8 @@ The game is like Super Mario Bros. 2:
 - Pull up plants to get turnips to throw. Some plants have coins or prizes.
 - You have hearts. A hit takes one heart away.
 
+From the Pumpkin Patch on, crows hover in the sky and dive at you.
+
 If you keep running fast, you get super speed, like Sonic. With super speed,
 you knock out pigs when you run into them.
 
@@ -81,9 +83,9 @@ it gets angry and attacks faster.
 | 16 | Eggbert | Jump on an egg, pick it up, and throw it back. |
 | 24 | The Black Bunny | He hops on you. Jump over his shockwaves. |
 | 32 | Tornado Bunny | Zap the tornadoes. Hold Up to zap up high. |
-| 40 | Money Cat again | He is faster and takes more coins. |
-| 48 | Eggbert again | She also spits fireballs. You cannot catch fireballs. |
-| 56 | Black Bunny and Tornado Bunny | Both at the same time! |
+| 40 | The Scarecrow | He sends packs of crows and throws pumpkins. Throw the pumpkins back at him. |
+| 48 | The Pink Fireball | She fills the sky with fire in spirals, waves, rings, and flowers. Hit her when she rests low. |
+| 56 | The Moon Bunny | From the game Bunny Madness. Zap her moon rocks. Then throw things at her shadow. Then jump on her helmet. |
 | 64 | Carrot Boom | Throw his carrot bombs back at him. |
 
 ## Change the game

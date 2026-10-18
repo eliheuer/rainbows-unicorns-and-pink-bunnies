@@ -231,12 +231,17 @@ class Play:
                     b.dead = True
                     return
         for boss in self.bosses:
-            if not boss.dead and overlap(b, boss):
-                boss.hurt(1)    # lightning only tickles bosses. Throw things at them!
+            if boss.dead:
+                continue
+            if boss.catch_bolt(b):
+                b.dead = True
+                return
+            if overlap(b, boss):
+                boss.hit(1, "zap", b)    # lightning only tickles bosses. Throw things at them!
                 b.dead = True
                 return
         for s in self.shots:
-            if not s.dead and s.kind in ("paw", "tornado", "fire") and overlap(b, s):
+            if not s.dead and s.kind in ("paw", "tornado", "fire", "rock") and overlap(b, s):
                 s.dead = True
                 b.dead = True
                 self.puff(s.x + s.w / 2, s.y + s.h / 2, WHITE)
@@ -256,11 +261,9 @@ class Play:
                 return
         for boss in self.bosses:
             if not boss.dead and overlap(o, boss):
-                if o.kind == "bomb":
-                    o.poof(self)
-                else:
-                    boss.hurt(3)
-                    o.poof(self)
+                if o.kind != "bomb":
+                    boss.hit(3, "throw", o)
+                o.poof(self)
                 return
 
     def defeat_pig(self, pig, dirx):
@@ -293,7 +296,7 @@ class Play:
                 self.defeat_pig(pig, sign(pig.x + 6 - x))
         for boss in self.bosses:
             if not boss.dead and abs(boss.cx - x) < r + boss.w / 2 and abs(boss.y + boss.h / 2 - y) < r + boss.h / 2:
-                boss.hurt(4)
+                boss.hit(4, "boom")
 
     def collect(self, c, p):
         c.dead = True
@@ -381,6 +384,8 @@ class Play:
             self.coins += got_back
             if self.n == 64:
                 self.banner("YOU BEAT CARROT BOOM!", "ALL THE CARROTS ARE SAFE!", 180)
+            elif boss.beaten_msg:
+                self.banner(*boss.beaten_msg, 180)
             elif got_back:
                 self.banner(f"{boss.name} IS BEATEN!", f"YOU GOT {got_back} COINS BACK!", 150)
             else:
@@ -493,6 +498,9 @@ class Play:
             else:
                 p.hurt(self, pig.x + pig.w / 2)
         for o in self.items:
+            if o.kind == "pumpkin" and o.state == "thrown" and o.owner == "boss" and overlap(p, o):
+                if p.hurt(self, o.x + o.w / 2):
+                    o.poof(self)
             if o.kind == "egg" and o.state == "moving" and o is not p.ride and overlap(p, o):
                 if p.vy >= 0 and p.y + p.h - o.y < 6:
                     continue
@@ -511,14 +519,15 @@ class Play:
             elif s.kind == "coin":
                 if p.hurt(self, s.x):
                     s.dead = True
-            else:
-                p.hurt(self, s.x + s.w / 2)
+            elif p.hurt(self, s.x + s.w / 2) and s.kind != "wave":
+                s.dead = True
         for b in self.bosses:
             if b.dead or not overlap(p, b):
                 continue
             if p.vy > 0 and p.y + p.h - b.y < 10:
                 p.vy = -4.5
                 sounds.sfx(sounds.BOUNCE)
+                b.stomped()
             else:
                 p.hurt(self, b.cx)
         for c in self.pickups:

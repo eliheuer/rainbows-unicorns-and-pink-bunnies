@@ -31,9 +31,9 @@ BOSSES = {
     16: ["eggbert"],
     24: ["blackbunny"],
     32: ["tornado"],
-    40: ["moneycat"],
-    48: ["eggbert"],
-    56: ["blackbunny", "tornado"],
+    40: ["scarecrow"],
+    48: ["pinkfire"],
+    56: ["moonbunny"],
     64: ["carrotboom"],
 }
 
@@ -43,6 +43,9 @@ BOSS_NAMES = {
     "blackbunny": "THE BLACK BUNNY",
     "tornado": "TORNADO BUNNY",
     "carrotboom": "CARROT BOOM",
+    "scarecrow": "THE SCARECROW",
+    "pinkfire": "THE PINK FIREBALL",
+    "moonbunny": "THE MOON BUNNY",
 }
 
 BOSS_TIPS = {
@@ -51,6 +54,9 @@ BOSS_TIPS = {
     "blackbunny": "JUMP OVER THE SHOCKWAVES!",
     "tornado": "ZAP THE TORNADOES! HOLD UP TO AIM HIGH!",
     "carrotboom": "THROW HIS CARROT BOMBS BACK AT HIM!",
+    "scarecrow": "THROW HIS PUMPKINS BACK! ZAP THE CROWS!",
+    "pinkfire": "DODGE THE FIRE! HIT HER WHEN SHE RESTS!",
+    "moonbunny": "LOOK AT THE MOON...",
 }
 
 
@@ -243,7 +249,9 @@ def _build_normal(lv, rnd):
         taken.append(tx)
         hh = heights[tx]
         r = rnd.random()
-        if world >= 2 and r < 0.12 + 0.03 * world:
+        if world >= 4 and r < 0.25:
+            kind, py = "crow", (hh - 7) * T
+        elif world >= 2 and r < 0.12 + 0.03 * world:
             kind, py = "fly", (hh - 5) * T
         elif world >= 1 and r < 0.4:
             kind, py = "charge", hh * T - 10

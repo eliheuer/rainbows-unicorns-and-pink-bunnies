@@ -191,6 +191,39 @@ def draw_pig(x, y, facing, frame, kind="walk", chomp=0, flipv=False):
         p.tri(3, 3, 7, 3, 4, -3 if up else 6, WHITE)
 
 
+def draw_crow(x, y, facing, frame, flipv=False):
+    """A black crow in a 12x10 box."""
+    p = Pen(x, y, 12, 10, flip=facing < 0, flipv=flipv)
+    up = frame % 2
+    p.tri(0, 4, 3, 3, 0, 7, NAVY)                   # tail
+    p.elli(1, 3, 9, 6, BLACK)                      # body
+    p.circ(9, 3, 2, BLACK)                         # head
+    p.tri(10, 2, 13, 4, 10, 4, ORANGE)             # beak
+    p.pset(9, 2, RED)                              # eye
+    p.pset(4, 8, ORANGE)
+    p.pset(6, 8, ORANGE)
+    if up:
+        p.tri(3, 4, 7, 4, 4, -2, DGRAY)            # wing up
+    else:
+        p.tri(3, 5, 7, 5, 5, 10, DGRAY)            # wing down
+
+
+def draw_critter(x, y, facing, frame, kind="walk", chomp=0, flipv=False):
+    """Any small enemy: pigs or crows."""
+    if kind == "crow":
+        draw_crow(x, y, facing, frame, flipv)
+    else:
+        draw_pig(x, y, facing, frame, kind, chomp, flipv)
+
+
+def draw_pumpkin(x, y):
+    pyxel.elli(x, y + 1, 12, 9, ORANGE)
+    pyxel.line(x + 4, y + 2, x + 4, y + 9, BROWN)
+    pyxel.line(x + 8, y + 2, x + 8, y + 9, BROWN)
+    pyxel.rect(x + 5, y - 1, 2, 3, DGREEN)
+    pyxel.pset(x + 3, y + 3, YELLOW)
+
+
 def draw_turnip(x, y):
     p = Pen(x, y, 8, 8)
     p.line(3, 2, 1, 0, GREEN)
@@ -420,6 +453,98 @@ def draw_eggbert(x, y, facing, t, angry=False, s=2):
     p.pset(9, 11, RED)
 
 
+def draw_scarecrow(x, y, t, hop, angry=False):
+    """A scarecrow bouncing on his pole like a pogo stick. 32x44 box."""
+    flap = (t // 10) % 2
+    # pole
+    pyxel.rect(x + 15, y + 30, 3, 14, DBROWN)
+    pyxel.rect(x + 12, y + 41, 9, 3, DBROWN)
+    # arms on a stick, with straw hands
+    pyxel.rect(x + 1, y + 18, 30, 3, DBROWN)
+    for hx in (x - 2, x + 30):
+        pyxel.line(hx, y + 17, hx + 3, y + 22 + flap, YELLOW)
+        pyxel.line(hx + 1, y + 16, hx + 3, y + 23, GOLD)
+        pyxel.line(hx + 3, y + 17, hx, y + 22 - flap, YELLOW)
+    # sleeves and plaid shirt
+    pyxel.rect(x + 3, y + 16, 26, 6, RED)
+    pyxel.rect(x + 9, y + 16, 15, 16, RED)
+    for i in range(0, 15, 4):
+        pyxel.line(x + 9 + i, y + 16, x + 9 + i, y + 31, DBROWN)
+    for j in range(0, 16, 4):
+        pyxel.line(x + 9, y + 17 + j, x + 23, y + 17 + j, ORANGE)
+    pyxel.rect(x + 15, y + 22, 3, 3, TAN)                 # patch
+    # straw sticking out at the waist and neck
+    for i in range(6):
+        pyxel.line(x + 10 + i * 3, y + 31, x + 9 + i * 3 + (i + flap) % 3, y + 35, YELLOW)
+    # burlap sack head
+    pyxel.circ(x + 16, y + 9, 8, TAN)
+    pyxel.circ(x + 16, y + 9, 7, PALETAN)
+    eye = RED if angry else BLACK
+    pyxel.rect(x + 12, y + 6, 3, 3, eye)
+    pyxel.rect(x + 18, y + 6, 3, 3, eye)
+    pyxel.pset(x + 13, y + 7, WHITE if not angry else YELLOW)
+    pyxel.pset(x + 19, y + 7, WHITE if not angry else YELLOW)
+    # stitched smile
+    for i in range(5):
+        pyxel.pset(x + 12 + i * 2, y + 12 + (1 if 0 < i < 4 else 0), DBROWN)
+        pyxel.pset(x + 12 + i * 2, y + 11 + (1 if 0 < i < 4 else 0), DBROWN)
+    # floppy hat
+    pyxel.rect(x + 4, y + 2, 24, 3, BROWN)
+    pyxel.tri(x + 9, y + 2, x + 23, y + 2, x + 18, y - 9, BROWN)
+    pyxel.rect(x + 10, y, 13, 2, RED)
+    # a crow friend on his arm
+    draw_crow(x + 23, y + 8 - flap, -1, t // 6)
+
+
+def draw_pink_fireball(x, y, t, angry=False, resting=False):
+    """A big pink ball of fire with a face. Centered in a 24x24 box."""
+    cx, cy = x + 12, y + 12
+    for i in range(5):
+        a = t * 0.2 + i * 1.25
+        fx = cx + math.cos(a) * 7
+        pyxel.tri(fx - 4, cy - 2, fx + 4, cy - 2, fx + math.sin(t * 0.3 + i) * 2, cy - 15 - (t + i * 3) % 5,
+                  HOTPINK if i % 2 else PINK)
+    pyxel.circ(cx, cy, 11 + (t // 4) % 2, HOTPINK)
+    pyxel.circ(cx, cy, 9, PINK)
+    pyxel.circ(cx, cy + 1, 6, LPINK)
+    pyxel.circ(cx, cy + 2, 3, WHITE)
+    if resting:
+        pyxel.line(cx - 6, cy - 2, cx - 3, cy - 2, PLUM)
+        pyxel.line(cx + 3, cy - 2, cx + 6, cy - 2, PLUM)
+    else:
+        pyxel.rect(cx - 6, cy - 4, 3, 4, WHITE)
+        pyxel.rect(cx + 3, cy - 4, 3, 4, WHITE)
+        pyxel.rect(cx - 5, cy - 3, 2, 3, PLUM)
+        pyxel.rect(cx + 4, cy - 3, 2, 3, PLUM)
+        if angry:
+            pyxel.line(cx - 7, cy - 7, cx - 3, cy - 5, PLUM)
+            pyxel.line(cx + 7, cy - 7, cx + 3, cy - 5, PLUM)
+    pyxel.rect(cx - 2, cy + 3, 5, 2, PLUM)
+
+
+# The Moon Bunny, from Bunny Madness. 0 = see-through, 7 = white,
+# 6 = light blue, c = blue.
+MOON_BUNNY = [
+    "07000070",
+    "0760076c",
+    "00777700",
+    "07c77c70",
+    "77777777",
+    "76777767",
+    "07777770",
+    "07700770",
+]
+MOON_COLORS = {"7": WHITE, "6": SKY, "c": BLUE}
+
+
+def draw_moon_bunny(x, y, facing, scale=4):
+    for py, row in enumerate(MOON_BUNNY):
+        for px, ch in enumerate(row):
+            if ch != "0":
+                dx = px if facing > 0 else 7 - px
+                pyxel.rect(x + dx * scale, y + py * scale, scale, scale, MOON_COLORS[ch])
+
+
 def draw_cloud(x, y, size=1, c=WHITE):
     pyxel.elli(x, y + 4 * size, 30 * size, 9 * size, c)
     pyxel.circ(x + 9 * size, y + 5 * size, 6 * size, c)
@@ -538,10 +663,10 @@ def draw_deco(th, sx, t):
         off = sx % 40
         for i in range(-1, W // 40 + 2):
             x = i * 40 - off
-            pyxel.elli(x + 4, 120, 16, 11, ORANGE)
-            pyxel.line(x + 12, 121, x + 12, 130, BROWN)
+            pyxel.elli(x + 4, 120, 16, 11, PALEORANGE)
+            pyxel.line(x + 12, 121, x + 12, 130, TAN)
             pyxel.rect(x + 11, 117, 2, 4, SAGE)
-            pyxel.elli(x + 26, 125, 10, 7, ORANGE)
+            pyxel.elli(x + 26, 125, 10, 7, PALEORANGE)
     elif kind == "clouds":
         off = sx % 70
         for i in range(-1, W // 70 + 2):

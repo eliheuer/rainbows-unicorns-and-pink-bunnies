@@ -327,6 +327,9 @@ class Pig:
         self.chomp = 0
         self.on_ground = False
         self.awake = False
+        self.state = "hover"     # crows: hover, swoop, climb, leave
+        self.cool = random.randint(30, 90)
+        self.minion = False      # crows sent by the Scarecrow fly away after one swoop
 
     def update(self, g):
         if not self.awake:
@@ -337,7 +340,9 @@ class Pig:
         self.t += 1
         if self.chomp > 0:
             self.chomp -= 1
-        if self.kind == "fly":
+        if self.kind == "crow":
+            self.crow(g)
+        elif self.kind == "fly":
             if g.move_x(self, self.vx) or abs(self.x - self.home_x) > 48:
                 self.vx = -self.vx
                 self.x += self.vx * 2
@@ -371,14 +376,55 @@ class Pig:
                 g.puff(c.x + 4, c.y + 5, ORANGE)
                 sounds.sfx(sounds.CHOMP)
 
+    def crow(self, g):
+        """Crows hover high up, then dive at you and fly back up."""
+        p = g.player
+        old_y = self.y
+        if self.state == "hover":
+            self.x += math.sin(self.t * 0.03) * 0.6
+            self.y = self.base_y + math.sin(self.t * 0.07) * 4
+            self.vx = 0
+            self.cool -= 1
+            if self.cool <= 0 and (self.minion or abs(p.cx - self.x) < 110) and p.y > self.y:
+                self.swoop_at(p)
+                g.float_text(self.x + 6, self.y - 6, "CAW!", WHITE)
+        elif self.state == "swoop":
+            self.x += self.vx
+            self.y += self.dive
+            self.dive -= 0.06            # curve back up, like a real swoop
+            if self.dive < -1.5:
+                self.state = "leave" if self.minion else "climb"
+        elif self.state == "climb":
+            self.vx *= 0.97
+            self.x += self.vx
+            self.y = max(self.base_y, self.y - 1.2)
+            if self.y <= self.base_y + 0.5:
+                self.state = "hover"
+                self.cool = 100
+        elif self.state == "leave":
+            self.x += self.vx
+            self.y -= 1.6
+            if self.y < -24:
+                self.dead = True
+        self.vy = self.y - old_y
+        self.dir = sign(self.vx) or (sign(p.cx - self.x) or self.dir)
+
+    def swoop_at(self, p):
+        self.state = "swoop"
+        frames = 40
+        self.vx = clamp((p.cx - self.x - self.w / 2) / frames, -3, 3)
+        self.dive = clamp((p.y - self.y) / frames * 1.6, 1.0, 4.0)
+
     def draw(self, t):
         f = self.dir if self.kind != "fly" else (sign(self.vx) or 1)
-        art.draw_pig(self.x, self.y, f, (self.t // 8), self.kind, self.chomp)
+        art.draw_critter(self.x, self.y, f, (self.t // 8), self.kind, self.chomp)
 
 
 class Item:
-    """Things you can carry: turnips, pigs, eggs, and carrot bombs."""
-    SIZES = {"turnip": (8, 8), "pig": (12, 10), "egg": (10, 8), "bomb": (10, 10)}
+    """Things you can carry: turnips, pigs, eggs, pumpkins, and carrot bombs."""
+    SIZES = {"turnip": (8, 8), "pig": (12, 10), "egg": (10, 8), "bomb": (10, 10),
+             "pumpkin": (12, 10)}
+    LANDS = ("bomb", "pumpkin")   # these sit on the ground after a throw
 
     def __init__(self, kind, x, y, state="held", variant=None):
         self.kind = kind
@@ -429,13 +475,13 @@ class Item:
         # thrown
         self.vy = min(self.vy + 0.2, MAX_FALL)
         if g.move_x(self, self.vx):
-            if self.kind == "bomb":
+            if self.kind in self.LANDS:
                 self.vx = 0
             else:
                 self.poof(g)
                 return
         if g.move_y(self, self.vy) == "floor":
-            if self.kind == "bomb":
+            if self.kind in self.LANDS:
                 self.state = "rest"
                 self.owner = None
                 self.vy = 0
@@ -453,7 +499,8 @@ class Item:
         if self.kind == "bomb":
             g.explode(self.x + self.w / 2, self.y + self.h / 2)
         else:
-            g.puff(self.x + self.w / 2, self.y + self.h / 2, WHITE)
+            g.puff(self.x + self.w / 2, self.y + self.h / 2,
+                   ORANGE if self.kind == "pumpkin" else WHITE)
             if self.kind == "pig":
                 g.knock_out_pig(self.x, self.y, self.variant, sign(self.vx) or 1)
 
@@ -461,11 +508,13 @@ class Item:
         if self.kind == "turnip":
             art.draw_turnip(self.x, self.y)
         elif self.kind == "pig":
-            art.draw_pig(self.x, self.y, sign(self.vx) or 1, t // 4, self.variant)
+            art.draw_critter(self.x, self.y, sign(self.vx) or 1, t // 4, self.variant)
         elif self.kind == "egg":
             art.draw_egg(self.x, self.y)
         elif self.kind == "bomb":
             art.draw_carrot_bomb(self.x, self.y, self.fuse, t)
+        elif self.kind == "pumpkin":
+            art.draw_pumpkin(self.x, self.y)
 
 
 class Pickup:
@@ -576,6 +625,11 @@ class Shot:
         self.dead = False
         self.t = 0
         self.landed = False
+        self.bx, self.by = x, y      # orbs fly along a path and wiggle around it
+        self.wave = 0.0
+        self.wave_f = 0.15
+        self.curve = 0.0
+        self.col = HOTPINK
 
     def update(self, g):
         self.t += 1
@@ -604,11 +658,28 @@ class Shot:
                 if self.kind == "tornado" and not self.landed:
                     self.landed = True
                     self.vx = sign(p.cx - self.x) * 0.8
+        elif self.kind == "orb":
+            # bullet-hell fire: can turn (curve) and wiggle (wave) as it flies
+            if self.curve:
+                c, s = math.cos(self.curve), math.sin(self.curve)
+                self.vx, self.vy = self.vx * c - self.vy * s, self.vx * s + self.vy * c
+            self.bx += self.vx
+            self.by += self.vy
+            wob = math.sin(self.t * self.wave_f) * self.wave if self.wave else 0
+            sp = math.hypot(self.vx, self.vy) or 1
+            self.x = self.bx - self.vy / sp * wob
+            self.y = self.by + self.vx / sp * wob
+            if self.x < -10 or self.x > W + 10 or self.y < -20 or self.y > H + 10:
+                self.dead = True
+            return
         else:
             self.x += self.vx
             self.y += self.vy
-            if self.kind == "fire" and g.rect_solid(self.x, self.y, self.w, self.h):
+            if self.kind in ("fire", "rock") and g.rect_solid(self.x, self.y, self.w, self.h):
                 self.dead = True
+                if self.kind == "rock":
+                    g.puff(self.x + self.w / 2, self.y + self.h, LAV)
+                    sounds.sfx(sounds.BOUNCE)
         if self.x < -30 or self.x > g.width * T + 30 or self.y > H + 30:
             self.dead = True
 
@@ -626,6 +697,13 @@ class Shot:
             art.draw_tornado(x, y, self.w, self.h, self.t)
         elif self.kind == "paw":
             art.draw_paw(x, y, t)
+        elif self.kind == "orb":
+            pyxel.circ(x + 2, y + 2, 3, self.col)
+            pyxel.circ(x + 2, y + 2, 1, WHITE)
+        elif self.kind == "rock":
+            pyxel.circ(x + 3, y + 3, 3, LAV)
+            pyxel.circb(x + 3, y + 3, 3, SKY)
+            pyxel.pset(x + 2, y + 2, WHITE)
 
 
 class Particle:
@@ -656,4 +734,4 @@ class FlyingPig:
             self.dead = True
 
     def draw(self, t):
-        art.draw_pig(self.x, self.y, 1, 0, self.kind, flipv=True)
+        art.draw_critter(self.x, self.y, 1, 0, self.kind, flipv=True)
