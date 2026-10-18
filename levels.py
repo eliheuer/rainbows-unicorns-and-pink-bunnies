@@ -60,6 +60,32 @@ BOSS_TIPS = {
 }
 
 
+# Which enemies live in each world, and how often they show up.
+# Pigs live everywhere, because pigs want carrots.
+ENEMIES = [
+    {"walk": 1},                                            # Sunny Farm
+    {"walk": 3, "charge": 2, "apple": 5},                   # Apple Orchard
+    {"walk": 3, "charge": 1, "rooster": 4, "fly": 2},       # Big Red Barn
+    {"walk": 2, "charge": 2, "corn": 4, "fly": 2},          # Corn Maze
+    {"walk": 2, "charge": 1, "jack": 4, "crow": 3},         # Pumpkin Patch
+    {"walk": 1, "fly": 3, "flame": 5},                      # Rainbow Clouds
+    {"walk": 3, "charge": 2, "bat": 4},                     # Moonlight Farm
+    {"walk": 2, "charge": 2, "fly": 1, "carrotbomb": 4},    # Carrot Boom's Silo
+]
+
+# How many tiles above the ground the flying enemies float.
+AIR_HEIGHT = {"fly": 4, "crow": 6, "bat": 6, "flame": 3}
+
+
+def pick(rnd, weights):
+    r = rnd.uniform(0, sum(weights.values()))
+    for kind, w in weights.items():
+        r -= w
+        if r <= 0:
+            return kind
+    return kind
+
+
 def world_of(n):
     return (n - 1) // 8
 
@@ -248,15 +274,9 @@ def _build_normal(lv, rnd):
             continue
         taken.append(tx)
         hh = heights[tx]
-        r = rnd.random()
-        if world >= 4 and r < 0.25:
-            kind, py = "crow", (hh - 7) * T
-        elif world >= 2 and r < 0.12 + 0.03 * world:
-            kind, py = "fly", (hh - 5) * T
-        elif world >= 1 and r < 0.4:
-            kind, py = "charge", hh * T - 10
-        else:
-            kind, py = "walk", hh * T - 10
+        kind = pick(rnd, ENEMIES[world])
+        # py is where the enemy's feet are: on the ground, or up in the air for flyers
+        py = (hh - AIR_HEIGHT.get(kind, 0)) * T
         lv.spawns.append(("pig", tx * T, py, kind))
 
     # three carrots to rescue

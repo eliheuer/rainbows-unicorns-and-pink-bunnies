@@ -133,7 +133,7 @@ class Play:
     # ---------------------------------------------------------- helpers
 
     def rideables(self):
-        out = [p for p in self.pigs if p.awake and not p.dead]
+        out = [p for p in self.pigs if p.awake and not p.dead and p.rideable]
         out += [i for i in self.items if i.rideable and not i.dead]
         return out
 
@@ -163,7 +163,12 @@ class Play:
         o = p.ride
         if isinstance(o, Pig):
             o.dead = True
-            p.holding = Item("pig", o.x, o.y, variant=o.kind)
+            if o.kind == "carrotbomb":
+                # like a Bob-omb: pick it up and its fuse keeps burning
+                p.holding = Item("bomb", o.x, o.y)
+                p.holding.fuse = o.fuse or 150
+            else:
+                p.holding = Item("pig", o.x, o.y, variant=o.kind)
             sounds.sfx(sounds.PLUCK)
             return
         if isinstance(o, Item) and o.pickable:
@@ -266,8 +271,11 @@ class Play:
                 o.poof(self)
                 return
 
-    def defeat_pig(self, pig, dirx):
+    def defeat_pig(self, pig, dirx, boom=True):
         pig.dead = True
+        if pig.kind == "carrotbomb" and boom:
+            self.explode(pig.x + pig.w / 2, pig.y + pig.h / 2)
+            return
         self.knock_out_pig(pig.x, pig.y, pig.kind, dirx)
         if random.random() < 0.3:
             c = Pickup("coin", pig.x + 3, pig.y, life=300)
@@ -491,8 +499,8 @@ class Play:
             if pig.dead or not pig.awake or pig is p.ride or not overlap(p, pig):
                 continue
             if strong:
-                self.defeat_pig(pig, p.facing)
-            elif p.vy >= 0 and p.y + p.h - pig.y < 7:
+                self.defeat_pig(pig, p.facing, boom=False)
+            elif pig.rideable and p.vy >= 0 and p.y + p.h - pig.y < 7:
                 p.y = pig.y - p.h
                 p.vy = 0
             else:

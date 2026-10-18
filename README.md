@@ -58,7 +58,21 @@ The game is like Super Mario Bros. 2:
 - Pull up plants to get turnips to throw. Some plants have coins or prizes.
 - You have hearts. A hit takes one heart away.
 
-From the Pumpkin Patch on, crows hover in the sky and dive at you.
+## Worlds and enemies
+
+Pigs live in every world, because pigs want carrots. Each world also has
+its own enemies.
+
+| Levels | World | Enemies |
+|---|---|---|
+| 1-8 | Sunny Farm | Pigs |
+| 9-16 | Apple Orchard | Rotten apples roll at you and bounce. |
+| 17-24 | Big Red Barn | Roosters crow, then run at you fast. |
+| 25-32 | Corn Maze | Popcorn cobs hop and pop hot popcorn into the air. |
+| 33-40 | Pumpkin Patch | Jack-o'-lanterns hop at you. Crows dive at you. |
+| 41-48 | Rainbow Clouds | Little pink flames float and shoot pink fire. Pigs fly here. |
+| 49-56 | Moonlight Farm | Bats dive at you. |
+| 57-64 | Carrot Boom's Silo | Walking carrot bombs light their fuse when you get close. Pick one up and throw it! |
 
 If you keep running fast, you get super speed, like Sonic. With super speed,
 you knock out pigs when you run into them.

@@ -313,23 +313,41 @@ class Player:
 
 
 class Pig:
+    """Every small enemy: pigs, and the other critters that live in each world.
+
+    kind is one of: walk, charge, fly (pigs), apple, rooster, corn, jack,
+    crow, bat, flame, carrotbomb.
+    """
+    SIZES = {"corn": (10, 14), "flame": (10, 12), "rooster": (12, 12),
+             "apple": (10, 10), "carrotbomb": (10, 12), "jack": (12, 11)}
+    FLYERS = ("fly", "crow", "bat", "flame")
+    CHOMPERS = ("walk", "charge", "fly", "crow", "bat", "rooster")   # these eat carrots
+
     def __init__(self, x, y, kind, speed):
-        self.x, self.y, self.w, self.h = x, y, 12, 10
+        self.w, self.h = self.SIZES.get(kind, (12, 10))
+        self.x, self.y = x, y - self.h      # y is where its feet go
         self.kind = kind
         self.speed = speed
         self.dir = -1
         self.vx = -speed
         self.vy = 0.0
         self.home_x = x
-        self.base_y = y
+        self.base_y = self.y
         self.t = random.randint(0, 100)
         self.dead = False
         self.chomp = 0
         self.on_ground = False
         self.awake = False
-        self.state = "hover"     # crows: hover, swoop, climb, leave
+        self.state = "hover"     # crows and bats: hover, swoop, climb, leave
+        self.mode = "walk"       # roosters: walk, crow, dash
+        self.timer = 0
+        self.fuse = 0            # carrot bombs: counts down once lit
         self.cool = random.randint(30, 90)
         self.minion = False      # crows sent by the Scarecrow fly away after one swoop
+
+    @property
+    def rideable(self):
+        return self.kind != "flame"
 
     def update(self, g):
         if not self.awake:
@@ -340,8 +358,10 @@ class Pig:
         self.t += 1
         if self.chomp > 0:
             self.chomp -= 1
-        if self.kind == "crow":
+        if self.kind in ("crow", "bat"):
             self.crow(g)
+        elif self.kind == "flame":
+            self.flame(g)
         elif self.kind == "fly":
             if g.move_x(self, self.vx) or abs(self.x - self.home_x) > 48:
                 self.vx = -self.vx
@@ -350,34 +370,107 @@ class Pig:
             self.y = self.base_y + math.sin(self.t * 0.05) * 10
             self.vy = self.y - old
         else:
-            p = g.player
-            speed = self.speed
-            if self.kind == "charge" and abs(p.cx - self.x) < 90 and abs(p.y - self.y) < 24:
-                self.dir = sign(p.cx - self.x - self.w / 2) or self.dir
-                speed = 1.8
-            self.vx = 0 if self.chomp else self.dir * speed
-            if g.move_x(self, self.vx):
+            self.walker(g)
+        if self.kind in self.CHOMPERS:
+            for c in g.pickups:
+                if c.kind == "carrot" and not c.dead and overlap(self, c):
+                    c.dead = True
+                    self.chomp = 40
+                    g.float_text(c.x + 4, c.y - 4, "CHOMP!", RED)
+                    g.puff(c.x + 4, c.y + 5, ORANGE)
+                    sounds.sfx(sounds.CHOMP)
+
+    def walker(self, g):
+        """Everything that walks, rolls, or hops along the ground."""
+        p = g.player
+        dx = p.cx - (self.x + self.w / 2)
+        near = abs(dx) < 100 and abs(p.y - self.y) < 30
+        speed = self.speed
+        k = self.kind
+        if k == "charge" and abs(dx) < 90 and abs(p.y - self.y) < 24:
+            self.dir = sign(dx) or self.dir
+            speed = 1.8
+        elif k == "apple":
+            # rolls fast and bounces a little
+            speed = self.speed * 1.7
+            if self.on_ground and self.t % 70 == 0:
+                self.vy = -2.6
+        elif k == "rooster":
+            self.timer -= 1
+            if self.mode == "walk":
+                self.cool -= 1
+                if near and self.cool <= 0:
+                    self.mode, self.timer = "crow", 35
+                    self.dir = sign(dx) or self.dir
+                    g.float_text(self.x + 6, self.y - 8, "COCK-A-DOODLE-DOO!", WHITE)
+                    sounds.sfx(sounds.SPEED)
+            elif self.mode == "crow":
+                speed = 0
+                if self.timer <= 0:
+                    self.mode, self.timer = "dash", 60
+            else:
+                speed = 2.6
+                if self.timer <= 0:
+                    self.mode, self.cool = "walk", 90
+        elif k == "jack":
+            # hops toward you
+            speed = 1.3 if not self.on_ground else 0
+            if self.on_ground and self.t % 45 == 0 and abs(dx) < 140:
+                self.dir = sign(dx) or self.dir
+                self.vy = -3.2
+        elif k == "corn":
+            speed = 0.3
+            if self.on_ground and self.t % 90 == 0:
+                self.vy = -4
+        elif k == "carrotbomb":
+            if self.fuse:
+                speed = 0
+                self.fuse -= 1
+                if self.fuse == 0:
+                    self.dead = True
+                    g.explode(self.x + self.w / 2, self.y + self.h / 2)
+                    return
+            elif abs(dx) < 50 and abs(p.y - self.y) < 30:
+                self.fuse = 70
+                g.float_text(self.x + 5, self.y - 8, "FSSST!", ORANGE)
+                sounds.sfx(sounds.THROW)
+        self.vx = 0 if self.chomp else self.dir * speed
+        if g.move_x(self, self.vx):
+            self.dir = -self.dir
+        if self.on_ground:
+            fx = self.x + self.w + 1 if self.dir > 0 else self.x - 1
+            if g.tile_at(fx, self.y + self.h + 2) not in "#B=":
                 self.dir = -self.dir
-            if self.on_ground:
-                fx = self.x + self.w + 1 if self.dir > 0 else self.x - 1
-                if g.tile_at(fx, self.y + self.h + 2) not in "#B=":
-                    self.dir = -self.dir
-            self.vy = min(self.vy + GRAVITY, MAX_FALL)
-            self.on_ground = g.move_y(self, self.vy) == "floor"
-            if self.on_ground:
-                self.vy = 0
-            if self.y > H:
-                self.dead = True
-        for c in g.pickups:
-            if c.kind == "carrot" and not c.dead and overlap(self, c):
-                c.dead = True
-                self.chomp = 40
-                g.float_text(c.x + 4, c.y - 4, "CHOMP!", RED)
-                g.puff(c.x + 4, c.y + 5, ORANGE)
-                sounds.sfx(sounds.CHOMP)
+        self.vy = min(self.vy + GRAVITY, MAX_FALL)
+        was = self.on_ground
+        self.on_ground = g.move_y(self, self.vy) == "floor"
+        if self.on_ground:
+            self.vy = 0
+            if k == "corn" and not was:
+                # POP! hot popcorn flies up
+                for d in (-1, 1):
+                    g.shots.append(Shot("popcorn", self.x + 3, self.y, 5, 5,
+                                        d * random.uniform(0.6, 1.4), -3.5, 0.15, 200))
+                sounds.sfx(sounds.POOF)
+        if self.y > H:
+            self.dead = True
+
+    def flame(self, g):
+        """Little pink flames float in waves and spit pink fire."""
+        self.x = self.home_x + math.sin(self.t * 0.02) * 28
+        old = self.y
+        self.y = self.base_y + math.sin(self.t * 0.06) * 8
+        self.vy = self.y - old
+        p = g.player
+        self.dir = sign(p.cx - self.x) or self.dir
+        if self.t % 130 == 0 and abs(p.cx - self.x) < 150:
+            ang = math.atan2(p.y + p.h / 2 - self.y - 6, p.cx - self.x - 5)
+            s = Shot("orb", self.x + 3, self.y + 4, 4, 4, math.cos(ang) * 1.2, math.sin(ang) * 1.2, 0, 300)
+            s.bx, s.by = s.x, s.y
+            g.shots.append(s)
 
     def crow(self, g):
-        """Crows hover high up, then dive at you and fly back up."""
+        """Crows and bats hover high up, then dive at you and fly back up."""
         p = g.player
         old_y = self.y
         if self.state == "hover":
@@ -387,7 +480,7 @@ class Pig:
             self.cool -= 1
             if self.cool <= 0 and (self.minion or abs(p.cx - self.x) < 110) and p.y > self.y:
                 self.swoop_at(p)
-                g.float_text(self.x + 6, self.y - 6, "CAW!", WHITE)
+                g.float_text(self.x + 6, self.y - 6, "CAW!" if self.kind == "crow" else "SKREE!", WHITE)
         elif self.state == "swoop":
             self.x += self.vx
             self.y += self.dive
@@ -417,7 +510,11 @@ class Pig:
 
     def draw(self, t):
         f = self.dir if self.kind != "fly" else (sign(self.vx) or 1)
-        art.draw_critter(self.x, self.y, f, (self.t // 8), self.kind, self.chomp)
+        frame = self.t // 8
+        if self.kind == "rooster" and self.mode == "dash":
+            frame = self.t // 3
+        lit = self.fuse if self.kind == "carrotbomb" else 0
+        art.draw_critter(self.x, self.y, f, frame, self.kind, self.chomp, lit=lit)
 
 
 class Item:
@@ -669,13 +766,13 @@ class Shot:
             sp = math.hypot(self.vx, self.vy) or 1
             self.x = self.bx - self.vy / sp * wob
             self.y = self.by + self.vx / sp * wob
-            if self.x < -10 or self.x > W + 10 or self.y < -20 or self.y > H + 10:
+            if not (g.cam_x - 10 < self.x < g.cam_x + W + 10) or not (-20 < self.y < H + 10):
                 self.dead = True
             return
         else:
             self.x += self.vx
             self.y += self.vy
-            if self.kind in ("fire", "rock") and g.rect_solid(self.x, self.y, self.w, self.h):
+            if self.kind in ("fire", "rock", "popcorn") and g.rect_solid(self.x, self.y, self.w, self.h):
                 self.dead = True
                 if self.kind == "rock":
                     g.puff(self.x + self.w / 2, self.y + self.h, LAV)
@@ -710,6 +807,10 @@ class Shot:
             pyxel.elli(x + 3 - w / 2, y - 1, w, 8, ORANGE)
             pyxel.elli(x + 4 - w / 2, y, max(1, w - 2), 6, YELLOW)
             pyxel.pset(x + 3, y + 1, WHITE)
+        elif self.kind == "popcorn":
+            pyxel.circ(x + 2, y + 2, 2, WHITE)
+            pyxel.pset(x + 3, y + 1, CREAM)
+            pyxel.pset(x + 1, y + 3, YELLOW)
         elif self.kind == "rock":
             pyxel.circ(x + 3, y + 3, 3, LAV)
             pyxel.circb(x + 3, y + 3, 3, SKY)

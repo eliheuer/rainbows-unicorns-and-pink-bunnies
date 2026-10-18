@@ -208,10 +208,143 @@ def draw_crow(x, y, facing, frame, flipv=False):
         p.tri(3, 5, 7, 5, 5, 10, DGRAY)            # wing down
 
 
-def draw_critter(x, y, facing, frame, kind="walk", chomp=0, flipv=False):
-    """Any small enemy: pigs or crows."""
+def draw_bat(x, y, facing, frame, flipv=False):
+    """A purple bat in a 12x10 box."""
+    p = Pen(x, y, 12, 10, flip=facing < 0, flipv=flipv)
+    if frame % 2:
+        p.tri(0, 1, 5, 4, 3, 7, PURPLE)
+        p.tri(12, 1, 7, 4, 9, 7, PURPLE)
+    else:
+        p.tri(0, 8, 5, 4, 3, 2, PURPLE)
+        p.tri(12, 8, 7, 4, 9, 2, PURPLE)
+    p.elli(4, 2, 5, 7, LAV)
+    p.tri(4, 3, 5, 0, 6, 3, LAV)
+    p.tri(7, 3, 8, 0, 9, 3, LAV)
+    p.pset(5, 4, YELLOW)
+    p.pset(7, 4, YELLOW)
+    p.pset(6, 7, WHITE)
+
+
+def draw_apple(x, y, facing, frame, flipv=False):
+    """A rotten apple with a worm sticking out, rolling. 10x10 box."""
+    p = Pen(x, y, 10, 10, flip=facing < 0, flipv=flipv)
+    p.elli(0, 1, 10, 9, PLUM)                 # outline
+    p.elli(1, 2, 8, 7, RED)
+    p.pset(2, 3, PINK)                        # shine
+    p.rect(4, 0, 1, 2, DBROWN)                # stem
+    p.tri(5, 0, 8, 0, 5, 2, GREEN)            # leaf
+    spot = (frame // 2) % 2                   # rotten spots roll around
+    p.elli(4 + spot, 6, 3, 3, BROWN)
+    p.pset(2, 7 - spot, BROWN)
+    # eyes
+    p.rect(2, 3, 2, 2, WHITE)
+    p.rect(5, 3, 2, 2, WHITE)
+    p.pset(3, 4, BLACK)
+    p.pset(6, 4, BLACK)
+    # the worm pokes out of a hole
+    wig = frame % 2
+    p.pset(8, 5, DBROWN)
+    p.rect(9, 3 + wig, 2, 3, PINK)
+    p.pset(10, 3 + wig, BLACK)
+
+
+def draw_rooster(x, y, facing, frame, mode="walk", flipv=False):
+    """A cranky rooster. 12x12 box."""
+    p = Pen(x, y, 12, 12, flip=facing < 0, flipv=flipv)
+    step = frame % 2
+    p.line(5, 9, 4 + step, 12, ORANGE)
+    p.line(7, 9, 8 - step, 12, ORANGE)
+    p.tri(0, 2, 3, 6, 0, 8, DGREEN)          # tail feathers
+    p.tri(0, 1, 4, 5, 2, 7, RED)
+    p.elli(1, 4, 9, 7, WHITE)
+    p.elli(7, 1, 5, 5, WHITE)
+    p.rect(8, -1, 3, 2, RED)                  # comb
+    p.pset(9, -2, RED)
+    p.tri(11, 3, 13, 4, 11, 5, YELLOW)        # beak
+    p.pset(11, 6, RED)                        # wattle
+    p.pset(10, 2, BLACK)
+    p.elli(3, 6, 4, 3, LGRAY)                 # wing
+    if mode == "crow":
+        p.tri(11, 2, 14, 1, 13, 4, YELLOW)    # beak wide open
+
+
+def draw_corn(x, y, facing, frame, flipv=False):
+    """A popcorn cob. 10x14 box."""
+    p = Pen(x, y, 10, 14, flip=facing < 0, flipv=flipv)
+    p.elli(2, 0, 6, 12, GOLD)
+    for ky in range(1, 11, 2):
+        for kx in (3, 5):
+            p.pset(kx + (ky // 2) % 2, ky, YELLOW)
+    p.tri(0, 6, 4, 13, 1, 13, GREEN)          # husk leaves
+    p.tri(10, 6, 6, 13, 9, 13, GREEN)
+    p.rect(3, 4, 1, 2, BLACK)
+    p.rect(6, 4, 1, 2, BLACK)
+    p.pset(4, 8, RED)
+    p.pset(5, 8, RED)
+
+
+def draw_jack(x, y, facing, frame, flipv=False):
+    """A hopping jack-o'-lantern. 12x11 box."""
+    p = Pen(x, y, 12, 11, flip=facing < 0, flipv=flipv)
+    p.elli(0, 1, 12, 10, ORANGE)
+    p.line(4, 2, 4, 9, GOLD)
+    p.line(8, 2, 8, 9, GOLD)
+    p.rect(5, -1, 2, 3, DGREEN)
+    glow = YELLOW if frame % 2 else CREAM
+    p.tri(2, 5, 4, 3, 5, 5, glow)             # carved eyes
+    p.tri(7, 5, 8, 3, 10, 5, glow)
+    p.rect(3, 7, 6, 2, glow)                  # carved grin
+    p.pset(4, 7, ORANGE)
+    p.pset(7, 8, ORANGE)
+
+
+def draw_flame(x, y, t, flipv=False):
+    """A little pink flame. 10x12 box."""
+    flick = (t // 4) % 2
+    pyxel.tri(x + 1, y + 6, x + 9, y + 6, x + 5 + flick, y - 3, HOTPINK)
+    pyxel.tri(x + 2, y + 6, x + 6, y + 6, x + 3 - flick, y, PINK)
+    pyxel.circ(x + 5, y + 7, 5, HOTPINK)
+    pyxel.circ(x + 5, y + 8, 3, PINK)
+    pyxel.circ(x + 5, y + 9, 1, WHITE)
+    pyxel.pset(x + 3, y + 6, PLUM)
+    pyxel.pset(x + 7, y + 6, PLUM)
+
+
+def draw_walking_bomb(x, y, facing, frame, lit=0, flipv=False):
+    """One of Carrot Boom's walking carrot bombs. 10x12 box."""
+    p = Pen(x, y, 10, 12, flip=facing < 0, flipv=flipv)
+    hot = lit and (lit // 4) % 2 == 0
+    step = frame % 2
+    p.rect(2, 10, 2, 2 - step, DBROWN)
+    p.rect(6, 10, 2, 1 + step, DBROWN)
+    p.tri(0, 3, 10, 3, 5, 11, RED if hot else ORANGE)
+    p.rect(0, 2, 10, 3, RED if hot else ORANGE)
+    p.rect(1, 1, 8, 2, DGRAY)                 # army helmet
+    p.pset(3, 4, BLACK)
+    p.pset(6, 4, BLACK)
+    p.line(5, 1, 7, -2, DGRAY)                # fuse
+    if lit:
+        p.pset(7 + frame % 2, -3, [YELLOW, WHITE, ORANGE][frame % 3])
+
+
+def draw_critter(x, y, facing, frame, kind="walk", chomp=0, flipv=False, lit=0):
+    """Any small enemy."""
     if kind == "crow":
         draw_crow(x, y, facing, frame, flipv)
+    elif kind == "bat":
+        draw_bat(x, y, facing, frame, flipv)
+    elif kind == "apple":
+        draw_apple(x, y, facing, frame, flipv)
+    elif kind == "rooster":
+        draw_rooster(x, y, facing, frame, "walk", flipv)
+    elif kind == "corn":
+        draw_corn(x, y, facing, frame, flipv)
+    elif kind == "jack":
+        draw_jack(x, y, facing, frame, flipv)
+    elif kind == "flame":
+        draw_flame(x, y, frame * 4, flipv)
+    elif kind == "carrotbomb":
+        draw_walking_bomb(x, y, facing, frame, lit, flipv)
     else:
         draw_pig(x, y, facing, frame, kind, chomp, flipv)
 
