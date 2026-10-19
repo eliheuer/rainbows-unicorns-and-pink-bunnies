@@ -9,21 +9,21 @@ from consts import *
 
 THEMES = [
     dict(name="SUNNY FARM", sky=SKY, sky2=CREAM, cloud=WHITE, hill=MINT, hill2=PALEMINT,
-         dirt=BROWN, dirt2=DBROWN, grass=GREEN, edge=DGREEN, block="hay", deco="fence", night=False),
+         dirt=BROWN, dirt2=DBROWN, grass=GREEN, edge=DGREEN, block="hay", front=SAGE, deco="fence", night=False),
     dict(name="APPLE ORCHARD", sky=BLUE, sky2=SKY, cloud=WHITE, hill=MINT, hill2=PALEMINT,
-         dirt=BROWN, dirt2=DBROWN, grass=GREEN, edge=DGREEN, block="hay", deco="trees", night=False),
+         dirt=BROWN, dirt2=DBROWN, grass=GREEN, edge=DGREEN, block="hay", front=SAGE, deco="trees", night=False),
     dict(name="BIG RED BARN", sky=PEACH, sky2=CREAM, cloud=WHITE, hill=MINT, hill2=PALEMINT,
-         dirt=BROWN, dirt2=DBROWN, grass=GREEN, edge=DGREEN, block="hay", deco="barn", night=False),
+         dirt=BROWN, dirt2=DBROWN, grass=GREEN, edge=DGREEN, block="hay", front=SAGE, deco="barn", night=False),
     dict(name="CORN MAZE", sky=SKY, sky2=WHITE, cloud=WHITE, hill=STRAW, hill2=CREAM,
-         dirt=BROWN, dirt2=DBROWN, grass=GREEN, edge=DGREEN, block="hay", deco="corn", night=False),
+         dirt=BROWN, dirt2=DBROWN, grass=GREEN, edge=DGREEN, block="hay", front=TAN, deco="corn", night=False),
     dict(name="PUMPKIN PATCH", sky=ORANGE, sky2=YELLOW, cloud=PEACH, hill=TAN, hill2=PALETAN,
-         dirt=DBROWN, dirt2=BLACK, grass=GREEN, edge=DGREEN, block="hay", deco="pumpkins", night=False),
+         dirt=DBROWN, dirt2=BLACK, grass=GREEN, edge=DGREEN, block="hay", front=SAGE, deco="pumpkins", night=False),
     dict(name="RAINBOW CLOUDS", sky=LPINK, sky2=SKY, cloud=WHITE, hill=WHITE, hill2=SKY,
-         dirt=PINK, dirt2=HOTPINK, grass=WHITE, edge=LPINK, block="candy", deco="clouds", night=False),
+         dirt=PINK, dirt2=HOTPINK, grass=WHITE, edge=LPINK, block="candy", front=LPINK, deco="clouds", night=False),
     dict(name="MOONLIGHT FARM", sky=NAVY, sky2=DPURPLE, cloud=DGRAY, hill=DUSK, hill2=DPURPLE,
-         dirt=DBROWN, dirt2=BLACK, grass=GREEN, edge=DGREEN, block="hay", deco="night", night=True),
+         dirt=DBROWN, dirt2=BLACK, grass=GREEN, edge=DGREEN, block="hay", front=NAVY, deco="night", night=True),
     dict(name="CARROT BOOM'S SILO", sky=DPURPLE, sky2=PLUM, cloud=LAV, hill=SLATE, hill2=NAVY,
-         dirt=DGRAY, dirt2=BLACK, grass=LGRAY, edge=LAV, block="brick", deco="silo", night=True),
+         dirt=DGRAY, dirt2=BLACK, grass=LGRAY, edge=LAV, block="brick", front=DPURPLE, deco="silo", night=True),
 ]
 
 BOSSES = {

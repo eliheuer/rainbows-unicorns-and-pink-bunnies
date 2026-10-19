@@ -720,7 +720,7 @@ def draw_background(th, cam_x, t):
         pyxel.circ(212, 28, 9, CREAM)
 
     # a big rainbow far away
-    rx = 140 - (cam_x * 0.04) % 400
+    rx = 140 - (cam_x * 0.04) % 400  # its feet hide behind the far hills
     if rx < -100:
         rx += 400
     for i, c in enumerate(RAINBOW):
@@ -733,21 +733,39 @@ def draw_background(th, cam_x, t):
         cy = 14 + (i * 23) % 40
         draw_cloud(cx, cy, 1, th["cloud"])
 
-    # far hills
-    k0 = int(cam_x * 0.25 // 48)
-    off = (cam_x * 0.25) % 48
+    # Layers of hills and bushes. Near layers move faster than far layers.
+    # Each layer fills down to the bottom, so nothing shows through below.
+    k0 = int(cam_x * 0.15 // 48)
+    off = (cam_x * 0.15) % 48
     for i in range(-1, W // 48 + 3):
         k = k0 + i
         r = 26 + (k * 37) % 18
         pyxel.circ(i * 48 - off + 24, 132 - r // 3, r, th["hill2"])
-    k0 = int(cam_x * 0.4 // 64)
-    off = (cam_x * 0.4) % 64
+    pyxel.rect(0, 126, W, H - 126, th["hill2"])
+    k0 = int(cam_x * 0.3 // 64)
+    off = (cam_x * 0.3) % 64
     for i in range(-1, W // 64 + 3):
         k = k0 + i
         r = 22 + (k * 53) % 16
         pyxel.circ(i * 64 - off + 32, 146 - r // 4, r, th["hill"])
+    pyxel.rect(0, 138, W, H - 138, th["hill"])
 
-    draw_deco(th, cam_x * 0.55, t)
+    draw_deco(th, cam_x * 0.5, t)
+    draw_bushes(th, cam_x * 0.7)
+
+
+def draw_bushes(th, sx):
+    """A row of round bushes in front of everything else in the background."""
+    c = th["front"]
+    k0 = int(sx // 22)
+    off = sx % 22
+    for i in range(-1, W // 22 + 3):
+        k = k0 + i
+        r = 8 + (k * 29) % 7
+        x = i * 22 - off + 11
+        pyxel.circ(x, 147, r, c)
+        pyxel.circ(x + 9, 150, r - 3, c)
+    pyxel.rect(0, 147, W, H - 147, c)
 
 
 def draw_deco(th, sx, t):

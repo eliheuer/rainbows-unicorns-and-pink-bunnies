@@ -756,8 +756,8 @@ class PinkFireball(Boss):
 
 class MoonBunny(Boss):
     """The Moon Bunny from Bunny Madness!
-    1. She hides behind spinning moon rocks. Zap the rocks.
-    2. She turns invisible. Watch her shadow and throw things at her.
+    1. She hides behind spinning moon rocks. Zap the rocks when she swoops low.
+    2. She turns invisible and hops. Watch her shadow and throw things at her.
     3. She puts on a moon rock helmet and charges. Jump on her head!"""
     name = "THE MOON BUNNY"
     beaten_msg = ("THE MOON BUNNY GIVES UP!", "SHE ONLY WANTED TO PLAY!")
@@ -775,6 +775,9 @@ class MoonBunny(Boss):
         self.vx = -0.9
         self.seen = 0
         self.clang = 0
+        self.drops = 0
+        self.low = 0       # phase 1: frames left in a low swoop
+        self.hop = 0.0     # phase 2: where she is in her hop
 
     def rock_pos(self, i):
         a = self.spin + i * math.tau / self.ROCKS
@@ -801,6 +804,7 @@ class MoonBunny(Boss):
                     else:
                         self.phase = 2
                         self.flash = 45
+                        self.timer = 90
                         g.banner("POOF! SHE VANISHED!", "WATCH HER SHADOW! THROW THINGS AT HER!", 120)
                     return True
         if self.phase == 2 and overlap(b, self):
@@ -822,7 +826,7 @@ class MoonBunny(Boss):
             self.hp -= 1
             self.flash = 45
             self.seen = 45
-            self.y = max(18, self.y - 22)
+            self.hop = 0.0
             self.vx = -self.vx
             sounds.sfx(sounds.BOSS_HIT)
             if self.hp > self.HEAD_HITS:
@@ -869,22 +873,50 @@ class MoonBunny(Boss):
             if self.y >= 32:
                 self.phase = 1
                 self.timer = 70
-                g.banner("THE MOON BUNNY!", "ZAP HER MOON ROCKS WITH LIGHTNING!", 120)
+                g.banner("THE MOON BUNNY!", "ZAP HER MOON ROCKS WHEN SHE COMES DOWN!", 120)
             return
-        if self.phase in (1, 2):
+        if self.phase == 1:
+            # She floats high and drops rocks. Then she swoops low,
+            # so her moon rocks come down where your zaps can reach them.
             self.x += self.vx
             if self.x < 12 or self.x > 222:
                 self.vx = -self.vx
                 self.x = clamp(self.x, 12, 222)
-            chase = 0.03 if self.phase == 2 else 0.02
-            self.x += clamp((p.cx - self.cx) * chase, -0.9, 0.9)
-            home = 32 if self.phase == 1 else 70
-            self.y += (home + math.sin(self.t / 24) * 9 - self.y) * 0.06
+            self.x += clamp((p.cx - self.cx) * 0.02, -0.9, 0.9)
+            if self.low:
+                self.low -= 1
+                home = 84
+                if self.low == 1:
+                    self.timer = 60
+            else:
+                home = 32 + math.sin(self.t / 24) * 9
+            self.y += (home - self.y) * 0.06
             self.timer -= 1
-            if self.timer <= 0:
-                self.timer = int((75 if self.phase == 1 else 95) / self.fury)
+            if self.timer <= 0 and not self.low:
+                self.timer = int(75 / self.fury)
+                self.drops += 1
+                if self.drops % 3 == 0:
+                    self.low = 170
+                    self.say("ZAP HER ROCKS NOW!", YELLOW)
+                else:
+                    aim = clamp((p.cx - self.cx) * 0.02, -1.2, 1.2)
+                    g.shots.append(Shot("rock", self.cx - 3, self.y + 26, 6, 6, aim, 0, 0.27, 300))
+                    sounds.sfx(sounds.THROW)
+        elif self.phase == 2:
+            # Invisible hops along the ground. Her shadow shows where she is.
+            self.x += self.vx * 0.8
+            if self.x < 12 or self.x > 222:
+                self.vx = -self.vx
+                self.x = clamp(self.x, 12, 222)
+            self.x += clamp((p.cx - self.cx) * 0.01, -0.5, 0.5)
+            self.hop += 0.035 * self.fury
+            floor = GROUND_Y - self.h
+            self.y = floor - abs(math.sin(self.hop)) * 46
+            self.timer -= 1
+            if self.timer <= 0 and math.cos(self.hop) * math.sin(self.hop) < 0:
+                self.timer = int(110 / self.fury)
                 aim = clamp((p.cx - self.cx) * 0.02, -1.2, 1.2)
-                g.shots.append(Shot("rock", self.cx - 3, self.y + 26, 6, 6, aim, 0, 0.27, 300))
+                g.shots.append(Shot("rock", self.cx - 3, self.y, 6, 6, aim, -1.5, 0.27, 300))
                 sounds.sfx(sounds.THROW)
         else:
             floor = GROUND_Y - self.h

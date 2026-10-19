@@ -99,7 +99,7 @@ it gets angry and attacks faster.
 | 32 | Tornado Bunny | Zap the tornadoes. Hold Up to zap up high. |
 | 40 | The Scarecrow | He sends packs of crows and throws pumpkins. Throw the pumpkins back at him. |
 | 48 | The Pink Fireball | She fills the sky with fire in spirals, waves, rings, and flowers. Hit her when she rests low. |
-| 56 | The Moon Bunny | From the game Bunny Madness. Zap her moon rocks. Then throw things at her shadow. Then jump on her helmet. |
+| 56 | The Moon Bunny | From the game Bunny Madness. When she swoops down, zap her moon rocks. Then she hides and hops. Watch her shadow and throw things at her. Then jump on her helmet. |
 | 64 | Carrot Boom | Throw his carrot bombs back at him. |
 
 ## Change the game
