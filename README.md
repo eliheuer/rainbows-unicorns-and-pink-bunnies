@@ -109,7 +109,7 @@ it gets angry and attacks faster.
 | 40 | The Scarecrow | He sends packs of crows and throws pumpkins. Throw the pumpkins back at him. |
 | 48 | The Pink Fireball | She fills the sky with fire in spirals, waves, and rings. Hit her when she rests low. |
 | 56 | The Moon Bunny | From the game Bunny Madness. When she swoops down, zap her moon rocks. Then she hides and hops. Watch her shadow and throw things at her. Then jump on her helmet. |
-| 64 | Carrot Boom | He has 4 moves: carrot bombs, a tornado dance, hide and seek under the ground, and garden time. When he waters his carrots, his butt is in the air. Hit it to do double damage! If you are hurt, a heart falls after each move. |
+| 64 | Carrot Boom | He has 5 moves: carrot bombs, a tornado dance, hide and seek under the ground, a little Tornado Bunny that dives at you (zap it two times), and garden time. When he waters his carrots, his butt is in the air. Hit it to do double damage! If you are hurt, a heart falls after each move. |
 
 ## Change the game
 

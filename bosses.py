@@ -517,19 +517,118 @@ class TornadoBunny(Boss):
                     pyxel.pset(self.cx + math.cos(a) * 10, self.y - 18 + math.sin(a) * 3, YELLOW)
 
 
+class MiniTornadoBunny:
+    """A little Tornado Bunny that helps Carrot Boom. It floats over you,
+    shakes, and then dives down. Zap it two times and it flies away."""
+
+    def __init__(self, g, dives):
+        self.g = g
+        self.x, self.y = -20.0, 20.0
+        self.w, self.h = 16, 28
+        self.state = "in"
+        self.timer = 0
+        self.dives = dives
+        self.hp = 2
+        self.flash = 0
+        self.gone = False
+        self.t = 0
+
+    @property
+    def cx(self):
+        return self.x + self.w / 2
+
+    def zapped(self, b):
+        if self.state == "leave" or not overlap(b, self):
+            return False
+        if self.flash == 0:
+            self.hp -= 1
+            self.flash = 30
+            sounds.sfx(sounds.BOSS_HIT)
+            for _ in range(8):
+                self.g.sparkle(self.cx, self.y + 10, random.choice([PINK, WHITE, YELLOW]))
+            if self.hp <= 0:
+                self.state = "leave"
+                self.g.float_text(self.cx, self.y - 10, "BYE BYE!", PINK)
+        return True
+
+    def update(self):
+        g, p = self.g, self.g.player
+        self.t += 1
+        self.timer -= 1
+        if self.flash:
+            self.flash -= 1
+        hover = 34 + math.sin(self.t * 0.08) * 4
+        if self.state == "in":
+            self.x += clamp(p.cx - self.cx, -2, 2)
+            self.y += (hover - self.y) * 0.08
+            if abs(p.cx - self.cx) < 6:
+                self.state, self.timer = "follow", 70
+        elif self.state == "follow":
+            self.x += clamp(p.cx - self.cx, -1.3, 1.3)
+            self.y += (hover - self.y) * 0.1
+            if self.timer <= 0:
+                self.state, self.timer = "warn", 35
+        elif self.state == "warn":
+            self.x += math.sin(self.t * 1.3) * 1.2
+            if self.timer <= 0:
+                self.state = "dive"
+                sounds.sfx(sounds.SPEED)
+        elif self.state == "dive":
+            self.y += 3.5
+            if overlap(p, self):
+                p.hurt(g, self.cx)
+            if self.y >= GROUND_Y - self.h:
+                self.y = GROUND_Y - self.h
+                self.state, self.timer = "dizzy", 45
+                g.shake = 6
+                g.puff(self.cx, GROUND_Y, WHITE)
+                sounds.sfx(sounds.BOOM)
+        elif self.state == "dizzy":
+            if self.timer <= 0:
+                self.dives -= 1
+                self.state = "rise" if self.dives > 0 else "leave"
+        elif self.state == "rise":
+            self.y -= 1.5
+            if self.y <= hover:
+                self.state, self.timer = "follow", 60
+        elif self.state == "leave":
+            self.y -= 2.5
+            self.x += 1.5
+            if self.y < -40:
+                self.gone = True
+
+    def draw(self, t):
+        if self.state in ("warn", "dive"):
+            pyxel.elli(self.cx - 8, GROUND_Y - 2, 16, 4, BLACK)
+        if self.flash and t % 4 < 2:
+            return
+        art.draw_tornado(self.x, self.y + 14, 16, 14, t)
+        art.draw_bunny(self.x + 2, self.y - 4, 1, "jump", 0, body=HOTPINK, inner=LPINK,
+                       belly=LPINK, eye=PURPLE, cheek=RED, angry=True)
+        if self.state == "warn" and t % 8 < 4:
+            art.text(self.cx - 2, self.y - 12, "!", RED)
+        if self.state == "dizzy":
+            for i in range(3):
+                a = t * 0.15 + i * 2.1
+                pyxel.pset(self.cx + math.cos(a) * 8, self.y - 6 + math.sin(a) * 3, YELLOW)
+
+
 class CarrotBoom(Boss):
-    """The final boss! He does four moves, one after the other:
+    """The final boss! He does five moves, one after the other:
     1. Carrot bombs: he hops around and throws carrot bombs.
     2. Tornado dance: he spins and sends little tornadoes at you.
     3. Hide and seek: he digs under the ground and pops up under you.
-    4. Garden time: he waters his carrots with his butt in the air. Bonk it!"""
+    4. Tornado Bunny: he calls a little Tornado Bunny that dives at you. Zap it!
+    5. Garden time: he waters his carrots with his butt in the air. Bonk it!"""
     name = "CARROT BOOM"
-    MOVES = ["bombs", "dance", "dig", "garden"]
+    MOVES = ["bombs", "dance", "dig", "tornado", "garden"]
     SHOUTS = {"bombs": "CARROT BOMBS!", "dance": "TORNADO DANCE!",
-              "dig": "HIDE AND SEEK!", "garden": "GARDEN TIME!"}
+              "dig": "HIDE AND SEEK!", "tornado": "GO, TORNADO BUNNY!",
+              "garden": "GARDEN TIME!"}
 
     def __init__(self, g, x, hard):
-        super().__init__(g, x, hard, 20, 22, 26)
+        super().__init__(g, x, hard, 24, 22, 26)
+        self.mini = None       # the little Tornado Bunny he calls for help
         self.n = 0
         self.state = "warn"
         self.timer = 60
@@ -619,6 +718,8 @@ class CarrotBoom(Boss):
         elif move == "dig":
             self.vy = -4.5
             self.timer = 999
+        elif move == "tornado":
+            self.mini = MiniTornadoBunny(self.g, 3 if not self.angry else 4)
         else:
             self.timer = 300
             self.bonks = 0
@@ -710,6 +811,20 @@ class CarrotBoom(Boss):
                 sounds.sfx(sounds.BOOM)
                 self.rest(70, "PEEKABOO!")
 
+    def do_tornado(self, p):
+        self.face_player()
+        if self.every(150):
+            self.throw_bomb(clamp((p.cx - self.cx) / 55, -3, 3), -4)
+            sounds.sfx(sounds.THROW)
+        if self.mini:
+            self.mini.update()
+            if self.mini.gone:
+                self.mini = None
+                self.rest(50, "AW, MAN!")
+
+    def catch_bolt(self, b):
+        return bool(self.mini) and self.mini.zapped(b)
+
     def do_garden(self, p):
         if self.t % 4 == 0:
             spout = self.cx + self.facing * 22
@@ -718,6 +833,8 @@ class CarrotBoom(Boss):
             self.next_move()
 
     def draw(self, t):
+        if self.mini:
+            self.mini.draw(t)
         if self.hidden:
             ex = self.ears_x + (random.uniform(-1.5, 1.5) if self.step == 2 else 0)
             pyxel.elli(ex - 9, GROUND_Y - 4, 18, 6, BROWN)

@@ -187,6 +187,9 @@ def stars(t, n=50):
 
 # ---------------------------------------------------------------- the movie player
 
+PACE = 1.5    # bigger means slower movies, so there is more time to read
+
+
 class Cutscene:
     SCENES = []    # (name, frames or None, music, [(frame, speaker, words), ...])
 
@@ -200,6 +203,11 @@ class Cutscene:
         self.crowd = [(rnd.choice(SKINS), rnd.choice(SHIRTS), rnd.choice(HAIRS))
                       for _ in range(40)]
         self.start_scene()
+
+    @property
+    def sf(self):
+        """The movie clock. It runs slower than the real clock."""
+        return self.f / PACE
 
     @property
     def scene(self):
@@ -216,7 +224,7 @@ class Cutscene:
         name, frames = self.scene[0], self.scene[1]
         tick = getattr(self, "tick_" + name, None)
         if tick:
-            tick(self.f, self.t)
+            tick(self.sf, self.t)
         for p in self.parts:
             p[0] += p[2]
             p[1] += p[3]
@@ -225,7 +233,7 @@ class Cutscene:
         self.parts = [p for p in self.parts if p[4] > 0]
         if C.pressed("back"):
             self.finish()
-        elif (frames and self.f >= frames) or (self.f > 30 and C.ok()):
+        elif (frames and self.sf >= frames) or (self.f > 30 and C.ok()):
             if self.i + 1 < len(self.SCENES):
                 self.i += 1
                 self.start_scene()
@@ -246,11 +254,11 @@ class Cutscene:
 
     def draw(self):
         name, frames, _, lines = self.scene
-        getattr(self, "draw_" + name)(self.f, self.t)
+        getattr(self, "draw_" + name)(self.sf, self.t)
         self.draw_parts()
         self.draw_words(lines)
         # fade in and out
-        fade = self.f if self.f < 20 else (frames - self.f if frames else 99)
+        fade = self.f if self.f < 20 else (frames * PACE - self.f if frames else 99)
         if fade < 20:
             pyxel.dither(1 - fade / 20)
             pyxel.rect(0, 0, W, H, BLACK)
@@ -259,17 +267,16 @@ class Cutscene:
     def draw_words(self, lines):
         now = None
         for start, who, words in lines:
-            if self.f >= start:
+            if self.sf >= start:
                 now = (start, who, words)
         if not now:
             return
         start, who, words = now
-        shown = words[:max(0, (self.f - start) * 2 // 3)]
+        shown = words[:max(0, int((self.sf - start) * 2 / 3))]
         rows = wrap(shown, 60)
         box = 9 + 8 * len(wrap(words, 60)) + (9 if who else 0)
-        pyxel.dither(0.85)
         pyxel.rect(0, H - box, W, box, NAVY)
-        pyxel.dither(1.0)
+        pyxel.rect(0, H - box, W, 1, LAV)
         y = H - box + 4
         if who:
             art.text(6, y, who, YELLOW)
@@ -390,7 +397,7 @@ class Intro(Cutscene):
             art.draw_pig(px, 118, 1, t // 6 + i, "walk")
             art.draw_carrot(px + 10, 112)
         if (t // 10) % 2:
-            art.text(150, 50, "HA HA HA!", ORANGE)
+            art.text(120, 22, "HA HA HA!", ORANGE)
 
     # 3. The President calls the pink bunny
     def draw_phone(self, f, t):
@@ -538,7 +545,7 @@ class Ending(Cutscene):
         if f > 380:
             art.draw_carrot(bx + 14, 96)
         if f > 460:
-            art.text(132, 64, "THANK YOU!", WHITE)
+            art.text(130, 36, "THANK YOU!", WHITE)
 
     # 2. They fly up into the sky
     def draw_fly(self, f, t):
@@ -876,6 +883,7 @@ class Ending(Cutscene):
         art.draw_moon_bunny(177, 102, -1)
         art.draw_scarecrow(214, 96, t, 0)
         art.big_center(18, "THE END", RAINBOW, 4)
+        pyxel.rect(70, 46, 116, 28, NAVY)
         art.center_text(50, "THANK YOU FOR PLAYING!", WHITE)
         if f > 120 and t % 40 < 28:
             art.center_text(64, "PRESS ENTER", YELLOW)
