@@ -43,6 +43,15 @@ To get the newest version of the game, run `git pull` in the game folder.
 
 When you carry something, hold Up to throw it high. Hold Down to put it down.
 
+## The story
+
+When you play for the first time, a short movie tells the story. Carrot Boom
+is on the news, and the President calls the pink bunny for help. To watch
+the story again, press Up on the title screen. When you beat the game, a big
+ending movie plays.
+
+In a movie, press Enter to go to the next scene. Press Esc to skip the movie.
+
 ## How the game works
 
 The game has 64 levels in 8 worlds. When you beat a level, the next level
@@ -98,9 +107,9 @@ it gets angry and attacks faster.
 | 24 | The Black Bunny | He hops on you. Jump over his shockwaves. |
 | 32 | Tornado Bunny | Zap the tornadoes. Hold Up to zap up high. |
 | 40 | The Scarecrow | He sends packs of crows and throws pumpkins. Throw the pumpkins back at him. |
-| 48 | The Pink Fireball | She fills the sky with fire in spirals, waves, rings, and flowers. Hit her when she rests low. |
+| 48 | The Pink Fireball | She fills the sky with fire in spirals, waves, and rings. Hit her when she rests low. |
 | 56 | The Moon Bunny | From the game Bunny Madness. When she swoops down, zap her moon rocks. Then she hides and hops. Watch her shadow and throw things at her. Then jump on her helmet. |
-| 64 | Carrot Boom | Throw his carrot bombs back at him. |
+| 64 | Carrot Boom | He has 4 moves: carrot bombs, a tornado dance, hide and seek under the ground, and garden time. When he waters his carrots, his butt is in the air. Hit it to do double damage! If you are hurt, a heart falls after each move. |
 
 ## Change the game
 
@@ -110,6 +119,7 @@ it gets angry and attacks faster.
 | `game.py` | What happens in a level |
 | `entities.py` | The bunny, pigs, items, and power-ups. Speed and jump numbers are at the top. |
 | `bosses.py` | The bosses |
+| `story.py` | The movie at the start and the ending |
 | `levels.py` | How the levels are built, the worlds, and the boss list |
 | `art.py` | How everything looks |
 | `sounds.py` | Sound effects and music |

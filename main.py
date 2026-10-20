@@ -1,8 +1,6 @@
 # Rainbows, Unicorns, and Pink Bunnies
 #
 # Run it with:   uv run main.py
-import math
-import random
 
 import pyxel
 
@@ -13,6 +11,7 @@ import save
 import sounds
 from consts import *
 from game import Play
+from story import Ending, Intro
 
 TITLE = "Rainbows, Unicorns, and Pink Bunnies"
 
@@ -27,7 +26,13 @@ class Title:
         self.t += 1
         if C.ok():
             sounds.sfx(sounds.SELECT)
-            self.app.to_select(self.app.save["unlocked"])
+            if self.app.save["seen_intro"]:
+                self.app.to_select(self.app.save["unlocked"])
+            else:
+                self.app.to_intro()
+        elif C.pressed("up"):
+            sounds.sfx(sounds.SELECT)
+            self.app.to_intro()
         if C.pressed("back") or pyxel.btnp(pyxel.KEY_Q):
             pyxel.quit()
 
@@ -48,6 +53,7 @@ class Title:
             art.draw_pig(px, 130, 1, t // 6 + i, "walk")
         if t % 40 < 28:
             art.center_text(100, "PRESS ENTER TO PLAY", WHITE)
+        art.center_text(112, "PRESS UP TO WATCH THE STORY", LPINK)
         art.center_text(150, "SAVE ALL THE CARROTS FROM CARROT BOOM!", CREAM)
 
 
@@ -141,39 +147,6 @@ class Select:
         art.center_text(153, "ESC: TITLE", LAV)
 
 
-class Ending:
-    def __init__(self, app):
-        self.app = app
-        self.t = 0
-        self.carrots = [(random.uniform(0, W), random.uniform(-H, 0), random.uniform(0.5, 1.5))
-                        for _ in range(40)]
-        sounds.music(sounds.MUSIC_TITLE)
-
-    def update(self):
-        self.t += 1
-        if self.t > 90 and C.ok():
-            self.app.to_title()
-
-    def draw(self):
-        t = self.t
-        pyxel.cls(SKY)
-        art.rainbow_arc(W // 2, 150, 110, 5)
-        for x, y, sp in self.carrots:
-            art.draw_carrot(x, (y + t * sp) % (H + 20) - 10)
-        pyxel.rect(0, 140, W, 20, GREEN)
-        art.big_center(20, "YOU DID IT!", RAINBOW, 3)
-        art.center_text(50, "CARROT BOOM IS BEATEN", WHITE)
-        art.center_text(60, "AND ALL THE CARROTS ON THE FARM ARE SAFE!", WHITE)
-        hop = abs(math.sin(t * 0.1)) * 10
-        art.draw_unicorn(90, 124, 1, (t // 8) % 2)
-        art.draw_bunny(120, 120 - hop, -1, "jump" if hop > 2 else "stand")
-        art.draw_bunny(150, 120, -1, "stand", body=WHITE, inner=LPINK, belly=CREAM, eye=RED,
-                       cheek=PINK)
-        art.text(164, 112, "SORRY!", WHITE)
-        if t > 90 and t % 40 < 28:
-            art.center_text(90, "PRESS ENTER", YELLOW)
-
-
 class App:
     def __init__(self):
         pyxel.init(W, H, title=TITLE, fps=60, quit_key=pyxel.KEY_NONE)
@@ -199,6 +172,9 @@ class App:
 
     def play(self, n):
         self.scene = Play(self, n)
+
+    def to_intro(self):
+        self.scene = Intro(self)
 
     def to_ending(self):
         self.scene = Ending(self)

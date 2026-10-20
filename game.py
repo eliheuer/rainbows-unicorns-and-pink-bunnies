@@ -65,7 +65,7 @@ class Play:
             names = " AND ".join(levels.BOSS_NAMES[k] for k in kinds)
             self.banner("BOSS: " + names, levels.BOSS_TIPS[kinds[-1]], 150)
             self.intro = 120
-            sounds.music(sounds.MUSIC_BOSS)
+            sounds.music(sounds.MUSIC_FINAL if n == LEVEL_COUNT else sounds.MUSIC_BOSS)
         else:
             self.banner(f"LEVEL {n}", self.theme["name"], 90)
             sounds.music(sounds.MUSIC_FARM)
@@ -297,7 +297,7 @@ class Play:
             self.particles.append(Particle(x, y, math.cos(a) * sp, math.sin(a) * sp, 24, c, 3))
         r = 26
         p = self.player
-        if abs(p.cx - x) < r and abs(p.y + p.h / 2 - y) < r:
+        if abs(p.cx - x) < r - 6 and abs(p.y + p.h / 2 - y) < r - 6:
             p.hurt(self, x)
         for pig in self.pigs:
             if not pig.dead and abs(pig.x + 6 - x) < r and abs(pig.y + 5 - y) < r:
@@ -536,7 +536,7 @@ class Play:
                 p.vy = -4.5
                 sounds.sfx(sounds.BOUNCE)
                 b.stomped()
-            else:
+            elif not b.harmless:
                 p.hurt(self, b.cx)
         for c in self.pickups:
             if not c.dead and overlap(p, c):

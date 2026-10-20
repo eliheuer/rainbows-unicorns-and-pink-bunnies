@@ -5,7 +5,7 @@ JUMP, COIN, ZAP, PLUCK, THROW, HURT, POOF, POWER = 0, 1, 2, 3, 4, 5, 6, 7
 BOSS_HIT, BOOM, CLEAR, STEAL, CARROT, CHOMP, SPEED, NOPE = 8, 9, 10, 11, 12, 13, 14, 15
 SUPER_JUMP, SELECT, BOUNCE = 16, 17, 18
 
-MUSIC_FARM, MUSIC_BOSS, MUSIC_TITLE = 0, 1, 2
+MUSIC_FARM, MUSIC_BOSS, MUSIC_TITLE, MUSIC_ENDING, MUSIC_FINAL = 0, 1, 2, 3, 4
 
 
 def setup():
@@ -62,9 +62,87 @@ def setup():
         "c2rrr a1rrr g1rrr c2rrr",
         "t", "4", "n", 22)
 
+    # Ending song: slow and warm. A soft verse, then a big happy chorus.
+    s[48].set(
+        "e3g3c4g3 d4b3g3b3 a3c4f4c4 e4rrr"
+        "f4e4c4a3 b3d4g4d4 f4d4b3g3 c4rrr",
+        "t", "5", "n", 30)
+    s[49].set(
+        "c2rrr g1rrr f1rrr c2rrr"
+        "f1rrr g1rrr g1rrr c2rrr",
+        "t", "5", "n", 30)
+    s[50].set(
+        "g2rg2r b2rb2r a2ra2r g2rg2r"
+        "a2ra2r b2rb2r b2rb2r g2rg2r",
+        "p", "2", "n", 30)
+    s[51].set(
+        "e4rc4a3 f4rc4a3 g4e4c4e4 d4rrr"
+        "c4e4a4e4 f4a4c4f4 g4f4e4d4 c4rrr",
+        "p", "5", "n", 30)
+    s[52].set(
+        "a1rrr f1rrr c2rrr g1rrr"
+        "a1rrr f1rrr g1rrr c2rrr",
+        "t", "5", "n", 30)
+    s[53].set(
+        "c3rc3r a2ra2r g2rg2r b2rb2r"
+        "c3rc3r a2ra2r b2rb2r g2rg2r",
+        "p", "2", "n", 30)
+
+    final_boss_song(s)
+
     pyxel.musics[MUSIC_FARM].set([40], [41], [42])
     pyxel.musics[MUSIC_BOSS].set([43], [44], [45])
     pyxel.musics[MUSIC_TITLE].set([46], [47], [])
+    pyxel.musics[MUSIC_ENDING].set([48, 51], [49, 52], [50, 53])
+    pyxel.musics[MUSIC_FINAL].set([54, 57], [55, 58], [56, 59])
+
+
+def final_boss_song(s):
+    """Carrot Boom's song: fast hard trance. A kick on every beat,
+    a growling bass between the kicks, and trance notes on top."""
+
+    def song(sound, notes, tones, volumes, effects):
+        sound.set(" ".join(notes), "".join(tones), "".join(volumes), "".join(effects), 12)
+
+    def arp(a, b, c, d):
+        # one bar of fast trance notes that go up and down a chord
+        notes = [a, b, c, d, c, b, a, b, a, b, c, d, c, d, c, b]
+        return notes, "s" * 16, "3" * 16, "n" * 16
+
+    def kick_bass(root):
+        # one bar: on every beat a kick, then three growls of bass
+        return [n for _ in range(4) for n in ("c1", root, root, root)], \
+            "tsss" * 4, "7455" * 4, "fnnf" * 4
+
+    def drums():
+        # hi-hats between the beats, and a clap on beats 2 and 4
+        return ["r", "r", "a4", "r", "a3", "r", "a4", "r"] * 2, \
+            "n" * 16, "00205020" * 2, "nnfnfnfn" * 2
+
+    def join(bars):
+        out = [[], [], [], []]
+        for bar in bars:
+            for i in range(4):
+                out[i] += bar[i]
+        return out
+
+    # part 1: trance notes over Am F C G
+    song(s[54], *join([arp("a3", "c4", "e4", "a4"), arp("f3", "a3", "c4", "f4"),
+                       arp("e3", "g3", "c4", "e4"), arp("d3", "g3", "b3", "d4")]))
+    song(s[55], *join([kick_bass(r) for r in ("a1", "f1", "c2", "g1")]))
+    song(s[56], *join([drums() for _ in range(4)]))
+
+    # part 2: a big melody over Am F G E
+    melody = [
+        "a4 r a4 r g4 r e4 r a4 r a4 r b4 r a4 g4",
+        "f4 r f4 r e4 r c4 r f4 r f4 r g4 r f4 e4",
+        "g4 r g4 r f4 r d4 r g4 r g4 r a4 r g4 f4",
+        "e4 r e4 r g#4 r b4 r e4 r e4 r g#4 r b4 r",
+    ]
+    notes = " ".join(melody).split()
+    song(s[57], notes, "p" * 64, "4" * 64, "n" * 64)
+    song(s[58], *join([kick_bass(r) for r in ("a1", "f1", "g1", "e1")]))
+    song(s[59], *join([drums() for _ in range(4)]))
 
 
 def sfx(n):

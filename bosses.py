@@ -7,13 +7,14 @@ import pyxel
 import art
 import sounds
 from consts import *
-from entities import Item, Particle, Pig, Shot
+from entities import Item, Particle, Pickup, Pig, Shot
 
 GROUND_Y = 17 * T   # the floor of every boss room
 
 
 class Boss:
     name = "BOSS"
+    harmless = False    # True when touching the boss does not hurt you
 
     def __init__(self, g, x, hard, hp, w, h):
         self.g = g
@@ -517,76 +518,237 @@ class TornadoBunny(Boss):
 
 
 class CarrotBoom(Boss):
-    """Throws carrot bombs, rains them from the sky, and charges at you."""
+    """The final boss! He does four moves, one after the other:
+    1. Carrot bombs: he hops around and throws carrot bombs.
+    2. Tornado dance: he spins and sends little tornadoes at you.
+    3. Hide and seek: he digs under the ground and pops up under you.
+    4. Garden time: he waters his carrots with his butt in the air. Bonk it!"""
     name = "CARROT BOOM"
+    MOVES = ["bombs", "dance", "dig", "garden"]
+    SHOUTS = {"bombs": "CARROT BOMBS!", "dance": "TORNADO DANCE!",
+              "dig": "HIDE AND SEEK!", "garden": "GARDEN TIME!"}
 
     def __init__(self, g, x, hard):
-        super().__init__(g, x, hard, 30, 22, 26)
-        self.rain = 0
-        self.charge = 0
+        super().__init__(g, x, hard, 20, 22, 26)
+        self.n = 0
+        self.state = "warn"
+        self.timer = 60
+        self.step = 0          # how far he is in the move
+        self.hidden = False    # under the ground
+        self.ears_x = 0.0
+        self.bonks = 0         # butt bonks in this garden time
+        self.harmless = True   # he only hurts you when he pops out of the ground
+
+    @property
+    def move(self):
+        return self.MOVES[self.n % len(self.MOVES)]
+
+    def next_move(self):
+        self.n += 1
+        self.state = "warn"
+        self.timer = 50
+
+    def hit(self, dmg, how, obj=None):
+        if self.hidden:
+            return False
+        if self.move == "garden" and self.state == "do":
+            if not self.hurt(dmg * 2):
+                return False
+            self.bonks += 1
+            self.g.float_text(self.cx, self.y - 20, "BUTT BONK!", YELLOW)
+            if self.bonks >= 3 and not self.dead:
+                # he jumps up and gets back to work
+                self.vy = -4
+                self.g.float_text(self.cx, self.y - 30, "HEY!!", RED)
+                self.next_move()
+            return True
+        return self.hurt(dmg)
+
+    def stomped(self):
+        if self.move == "garden" and self.state == "do":
+            self.hit(2, "stomp")
+
+    def throw_bomb(self, vx, vy, fuse=180):
+        bomb = Item("bomb", self.cx - 5, self.y - 6, state="thrown")
+        bomb.owner = "boss"
+        bomb.vx, bomb.vy = vx, vy
+        bomb.fuse = fuse
+        self.g.items.append(bomb)
 
     def think(self):
         g = self.g
-        if self.charge > 0:
-            # get ready... then run across the room
-            self.charge -= 1
-            if self.charge > 30:
-                self.vx = 0
-            elif self.charge == 30:
-                self.face_player()
-                self.vx = self.facing * 3.4
-                sounds.sfx(sounds.SPEED)
-            self.physics()
-            if self.charge == 0 or self.x <= 9 or self.x + self.w >= 247:
-                self.charge = 0
-                self.vx = 0
+        p = g.player
+        self.timer -= 1
+        if self.hidden:
+            self.dig(p)
             return
-        self.face_player()
         landed = self.physics()
+        self.harmless = not (self.state == "rest" and self.move == "dig" and self.vy < 0)
         if self.on_ground:
             self.vx *= 0.85
         if landed:
             g.puff(self.cx, GROUND_Y, WHITE)
-        if self.on_ground and self.every(50):
-            target = random.uniform(40, 200)
-            self.vy = -3.5
-            self.vx = clamp((target - self.x) / 23, -2, 2)
-        if self.every(85):
-            n = 2 if self.angry else 1
-            for i in range(n):
-                bomb = Item("bomb", self.cx - 5, self.y - 6, state="thrown")
-                bomb.owner = "boss"
-                bomb.vx = clamp((g.player.cx - self.cx) / 55, -3, 3) + (i * 1.2 - 0.6) * (n - 1)
-                bomb.vy = -4 - i
-                bomb.fuse = 140
-                g.items.append(bomb)
-            sounds.sfx(sounds.THROW)
-        if self.on_ground and self.every(330):
-            self.charge = 70
-            g.float_text(self.cx, self.y - 30, "CARROT CHARGE!", ORANGE)
-        if self.angry:
-            self.rain += 1
-            if self.rain % 300 == 1:
-                g.banner("CARROT RAIN!", "", 90)
-                for _ in range(5):
-                    b = Item("bomb", random.uniform(20, 228), random.uniform(-40, -12), state="thrown")
+        if self.state == "warn":
+            self.face_player()
+            if self.timer <= 0:
+                self.state = "do"
+                self.step = 0
+                g.float_text(self.cx, self.y - 30, self.SHOUTS[self.move], ORANGE)
+                self.start()
+            return
+        if self.state == "rest":
+            if self.timer <= 0:
+                self.next_move()
+            return
+        getattr(self, "do_" + self.move)(p)
+
+    def start(self):
+        g = self.g
+        move = self.move
+        if move == "bombs":
+            self.timer = 300 if self.angry else 240
+            if self.angry:
+                g.banner("CARROT RAIN!", "", 60)
+                for _ in range(2):
+                    b = Item("bomb", random.uniform(30, 218), random.uniform(-40, -12), state="thrown")
                     b.owner = "boss"
                     b.fuse = 200
                     g.items.append(b)
+        elif move == "dance":
+            self.timer = 220
+        elif move == "dig":
+            self.vy = -4.5
+            self.timer = 999
+        else:
+            self.timer = 300
+            self.bonks = 0
+            self.drop_heart()
+            # his watering can makes the carrots grow back right away
+            for tuft in g.tufts:
+                if not tuft.active:
+                    tuft.timer = 1
+
+    def drop_heart(self):
+        """If you are hurt, a heart falls from the sky to help you."""
+        g, p = self.g, self.g.player
+        if p.hearts < p.max_hearts and not any(c.kind == "heart" for c in g.pickups):
+            g.pickups.append(Pickup("heart", random.uniform(30, 210), -10, life=600))
+
+    def rest(self, frames, msg="PHEW!"):
+        self.state = "rest"
+        self.timer = frames
+        self.drop_heart()
+        self.g.float_text(self.cx, self.y - 30, msg, WHITE)
+
+    def do_bombs(self, p):
+        self.face_player()
+        if self.on_ground and self.every(60):
+            target = random.uniform(40, 200)
+            self.vy = -3.5
+            self.vx = clamp((target - self.x) / 23, -2, 2)
+        if self.every(115):
+            self.throw_bomb(clamp((p.cx - self.cx) / 55, -3, 3), -4)
+            sounds.sfx(sounds.THROW)
+        if self.timer <= 0:
+            self.rest(50)
+
+    def do_dance(self, p):
+        # he spins and hops, and every so often a little tornado flies out
+        self.step += 1
+        if self.step % 8 == 0:
+            self.facing = -self.facing
+        if self.on_ground and self.step % 30 == 0:
+            self.vy = -2
+        if self.step % 18 == 0:
+            self.g.particles.append(Particle(self.cx + random.uniform(-10, 10), self.y - 8,
+                                             random.uniform(-0.5, 0.5), -0.7, 30,
+                                             random.choice([PINK, YELLOW, SKY]), 2))
+        when = (50, 150)
+        if self.step in when:
+            side = 1 if p.cx > self.cx else -1
+            s = Shot("tornado", self.cx - 5 + side * 16, GROUND_Y - 16, 10, 16, side * 0.6, 0, 0.2, 300)
+            s.chase = False
+            self.g.shots.append(s)
+            sounds.sfx(sounds.SPEED)
+        if self.timer <= 0:
+            self.rest(50, "SO DIZZY!")
+
+    def do_dig(self, p):
+        # jump up, then dive into the ground
+        if self.on_ground and self.vy >= 0 and self.step == 0 and self.timer < 990:
+            self.step = 1
+            self.hidden = True
+            self.ears_x = self.cx
+            self.timer = 160
+            self.vx = 0
+            self.y = GROUND_Y + 40   # out of the way, under the floor
+            self.g.puff(self.ears_x, GROUND_Y, BROWN)
+            sounds.sfx(sounds.POOF)
+
+    def dig(self, p):
+        """He is under the ground. Only his ears stick out."""
+        g = self.g
+        if self.step == 1:
+            # the ears chase you
+            speed = 1.3 if self.angry else 1.0
+            self.ears_x += clamp(p.cx - self.ears_x, -speed, speed)
+            self.ears_x = clamp(self.ears_x, 20, 236)
+            if self.t % 5 == 0:
+                g.particles.append(Particle(self.ears_x + random.uniform(-6, 6), GROUND_Y - 1,
+                                            random.uniform(-0.6, 0.6), -1.2, 16, BROWN, 2))
+            if self.timer <= 0:
+                self.step = 2
+                self.timer = 55     # the ears shake: get out of the way!
+        elif self.step == 2:
+            if self.timer <= 0:
+                self.hidden = False
+                self.x = self.ears_x - self.w / 2
+                self.y = GROUND_Y - self.h
+                self.vy = -6
+                g.puff(self.ears_x, GROUND_Y, BROWN)
+                g.shake = 6
+                sounds.sfx(sounds.BOOM)
+                self.rest(70, "PEEKABOO!")
+
+    def do_garden(self, p):
+        if self.t % 4 == 0:
+            spout = self.cx + self.facing * 22
+            self.g.particles.append(Particle(spout, self.y + 12, self.facing * 0.4, 1.2, 14, SKY, 1))
+        if self.timer <= 0:
+            self.next_move()
 
     def draw(self, t):
-        if self.visible(t):
-            back = -self.facing
-            # carrot sack on his back
-            sx = self.cx + back * 12 - 7
-            pyxel.elli(sx, self.y + 2, 14, 14, BROWN)
-            art.draw_carrot(sx + 3, self.y - 4)
-            pose = "run" if self.charge and self.charge <= 30 else ("hold" if self.on_ground else "jump")
-            art.draw_bunny(self.x - 1, self.y - 14, self.facing, pose, t // 4,
-                           body=WHITE, inner=LPINK, belly=CREAM, eye=RED, cheek=PINK,
-                           angry=True, s=2)
-            if self.charge > 30:
-                self.warn(t)
+        if self.hidden:
+            ex = self.ears_x + (random.uniform(-1.5, 1.5) if self.step == 2 else 0)
+            pyxel.elli(ex - 9, GROUND_Y - 4, 18, 6, BROWN)
+            pyxel.elli(ex - 5, GROUND_Y - 13, 4, 11, WHITE)
+            pyxel.elli(ex + 1, GROUND_Y - 14, 4, 12, WHITE)
+            pyxel.rect(ex - 4, GROUND_Y - 11, 2, 6, LPINK)
+            pyxel.rect(ex + 2, GROUND_Y - 12, 2, 7, LPINK)
+            if self.step == 2 and t % 8 < 4:
+                art.text(ex - 2, GROUND_Y - 26, "!", RED)
+            return
+        if not self.visible(t):
+            return
+        if self.move == "garden" and self.state == "do":
+            art.draw_boom_garden(self.x, self.y, self.facing, t)
+            return
+        back = -self.facing
+        # carrot sack on his back
+        sx = self.cx + back * 12 - 7
+        pyxel.elli(sx, self.y + 2, 14, 14, BROWN)
+        art.draw_carrot(sx + 3, self.y - 4)
+        if self.state == "rest":
+            pose = "stand"
+        elif self.move == "dance" and self.state == "do":
+            pose = "jump" if (t // 8) % 2 else "hold"
+        else:
+            pose = "hold" if self.on_ground else "jump"
+        art.draw_bunny(self.x - 1, self.y - 14, self.facing, pose, t // 4,
+                       body=WHITE, inner=LPINK, belly=CREAM, eye=RED, cheek=PINK,
+                       angry=True, s=2)
+        if self.state == "warn":
+            self.warn(t)
 
 
 class Scarecrow(Boss):
@@ -659,12 +821,11 @@ class PinkFireball(Boss):
     """A bullet-hell boss. She fills the sky with fire in pretty math
     patterns, then rests down low. That is when you hit her!"""
     name = "THE PINK FIREBALL"
-    PATTERNS = ["spiral", "waves", "rings", "flower"]
-    SHOUTS = {"spiral": "SPIRAL!", "waves": "SINE WAVES!", "rings": "RING OF FIRE!",
-              "flower": "FIRE FLOWER!"}
+    PATTERNS = ["spiral", "waves", "rings"]
+    SHOUTS = {"spiral": "SPIRAL!", "waves": "SINE WAVES!", "rings": "RING OF FIRE!"}
 
     def __init__(self, g, x, hard):
-        super().__init__(g, x, hard, 22, 20, 20)
+        super().__init__(g, x, hard, 18, 20, 20)
         self.y = 50
         self.state = "warn"
         self.timer = 40
@@ -690,6 +851,9 @@ class PinkFireball(Boss):
         t = self.t
         if self.state == "rest":
             tx, ty = 118, GROUND_Y - 46 + math.sin(t * 0.05) * 4
+        elif self.pattern == "waves":
+            # she stays in the middle, so you can always run around her waves
+            tx, ty = 118, 40
         else:
             tx = 118 + math.sin(t * 0.013) * 85
             ty = 46 + math.sin(t * 0.027) * 20
@@ -701,7 +865,7 @@ class PinkFireball(Boss):
         if self.state == "warn":
             if self.timer <= 0:
                 self.state = "fire"
-                self.timer = 260 if self.angry else 220
+                self.timer = 220 if self.angry else 180
                 g.float_text(self.cx, self.y - 14, self.SHOUTS[self.pattern], HOTPINK)
             return
         if self.state == "rest":
@@ -712,7 +876,7 @@ class PinkFireball(Boss):
             return
         if self.timer <= 0:
             self.state = "rest"
-            self.timer = 80 if self.angry else 110
+            self.timer = 110 if self.angry else 140
             g.float_text(self.cx, self.y - 14, "PANT... PANT...", LPINK)
             return
         self.fire()
@@ -722,26 +886,22 @@ class PinkFireball(Boss):
         f = self.fury
         pat = self.pattern
         aim = math.atan2(p.y + p.h / 2 - (self.y + self.h / 2), p.cx - self.cx)
-        if pat == "spiral" and self.t % max(3, int(6 / f)) == 0:
-            arms = 3 if self.angry else 2
-            for k in range(arms):
-                self.orb(self.a + k * math.tau / arms, 1.2)
-            self.a += 0.31
-        elif pat == "waves" and self.t % max(8, int(16 / f)) == 0:
-            spread = (-0.4, 0, 0.4) if self.angry or self.hard else (-0.25, 0.25)
-            for off in spread:
-                self.orb(aim + off, 1.3, wave=12, wave_f=0.14, col=PURPLE)
-        elif pat == "rings" and self.t % max(24, int(46 / f)) == 0:
-            n = 16 if self.angry else 12
-            self.shots_made += 1
-            off = (self.shots_made % 2) * math.pi / n
+        if pat == "spiral" and self.t % max(8, int(11 / f)) == 0:
+            # a slow sprinkler with two arms. Walk along with the gap!
+            for k in range(2):
+                self.orb(self.a + k * math.pi, 1.0)
+            self.a += 0.22
+        elif pat == "waves" and self.t % max(16, int(24 / f)) == 0:
+            # two wiggly lines on each side of you. Stand still in the gap!
+            for off in (-0.45, 0.45):
+                self.orb(aim + off, 1.2, wave=7, wave_f=0.14, col=PURPLE)
+        elif pat == "rings" and self.t % max(45, int(60 / f)) == 0:
+            # a ring with a big hole where you stand. Stay in the hole!
+            n = 10
             for k in range(n):
-                self.orb(off + k * math.tau / n, 1.1, col=PINK)
-        elif pat == "flower" and self.t % max(4, int(7 / f)) == 0:
-            turn = 1 if (self.t // 60) % 2 else -1
-            self.orb(self.a, 1.15, curve=0.016 * turn, col=LPINK)
-            self.orb(self.a + math.pi, 1.15, curve=0.016 * turn, col=LPINK)
-            self.a += 0.5
+                a = aim + math.pi / n + k * math.tau / n
+                if abs(math.remainder(a - aim, math.tau)) > 0.6:
+                    self.orb(a, 1.0, col=PINK)
         else:
             return
         if self.t % 12 == 0:

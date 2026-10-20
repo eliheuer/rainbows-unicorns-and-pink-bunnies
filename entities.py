@@ -727,6 +727,8 @@ class Shot:
         self.wave_f = 0.15
         self.curve = 0.0
         self.col = HOTPINK
+        self.top = 1.6               # top speed of a chasing tornado
+        self.chase = True            # False: the tornado rolls straight and does not follow you
 
     def update(self, g):
         self.t += 1
@@ -739,8 +741,8 @@ class Shot:
             ty = p.y + p.h / 2 - self.h / 2
             self.vy += clamp((ty - self.y) * 0.004, -0.06, 0.06)
             self.vy = clamp(self.vy, -1.2, 1.2)
-        if self.kind == "tornado" and self.landed:
-            self.vx = clamp(self.vx + sign(p.cx - self.x - self.w / 2) * 0.03, -1.6, 1.6)
+        if self.kind == "tornado" and self.landed and self.chase:
+            self.vx = clamp(self.vx + sign(p.cx - self.x - self.w / 2) * 0.03, -self.top, self.top)
         self.vy = min(self.vy + self.grav, MAX_FALL)
         if self.kind in ("coin", "tornado", "wave"):
             if g.move_x(self, self.vx) and self.kind != "tornado":
@@ -754,7 +756,7 @@ class Shot:
                 self.vy = 0
                 if self.kind == "tornado" and not self.landed:
                     self.landed = True
-                    self.vx = sign(p.cx - self.x) * 0.8
+                    self.vx = sign(p.cx - self.x) * (0.8 if self.chase else 0.6)
         elif self.kind in ("orb", "lasercoin"):
             # bullet-hell fire: can turn (curve) and wiggle (wave) as it flies
             if self.curve:

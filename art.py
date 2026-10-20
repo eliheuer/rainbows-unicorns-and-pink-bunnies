@@ -564,6 +564,36 @@ def draw_money_cat(x, y, t, wave, facing=1, angry=False):
     p.elli(17, 25, 4, 3, WHITE)
 
 
+def draw_boom_garden(x, y, facing, t):
+    """Carrot Boom waters his carrots, bent over with his butt in the air."""
+    p = Pen(x - 3, y - 2, 14, 14, flip=facing < 0, s=2)
+    # carrot sack on the ground behind him
+    p.elli(-7, 9, 6, 5, BROWN)
+    p.rect(-5, 7, 1, 2, ORANGE)
+    # feet and the big round butt with a fluffy tail
+    p.rect(1, 12, 3, 2, LPINK)
+    p.rect(5, 12, 3, 2, LPINK)
+    p.elli(0, 3, 9, 10, WHITE)
+    p.elli(1, 2, 3, 3, LGRAY)
+    p.pset(2, 3, CREAM)
+    p.line(4, 9, 4, 11, LGRAY)
+    # back, head down low, floppy ears on the ground
+    p.elli(6, 6, 6, 6, WHITE)
+    p.elli(8, 8, 6, 5, WHITE)
+    p.elli(11, 12, 6, 2, WHITE)
+    p.rect(12, 12, 4, 1, LPINK)
+    p.pset(11, 10, RED)
+    p.pset(13, 11, PINK)
+    # watering can
+    p.rect(13, 6, 4, 3, LGRAY)
+    p.line(13, 5, 16, 5, DGRAY)
+    p.line(17, 7, 19, 5, DGRAY)
+    p.rect(12, 8, 2, 1, WHITE)
+    # a flashing ring shows where to hit him
+    if t % 20 < 12:
+        pyxel.circb(p._x(4) + 1, y + 14, 12 + (t // 5) % 2, YELLOW)
+
+
 def draw_eggbert(x, y, facing, t, angry=False, s=2):
     """Pink dinosaur with a bow who spits eggs. 12x16 box, scaled up."""
     p = Pen(x, y, 12, 16, flip=facing < 0, s=s)

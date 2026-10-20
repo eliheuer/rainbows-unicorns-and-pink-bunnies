@@ -53,7 +53,7 @@ BOSS_TIPS = {
     "eggbert": "JUMP ON AN EGG, PICK IT UP, THROW IT BACK!",
     "blackbunny": "JUMP OVER THE SHOCKWAVES!",
     "tornado": "ZAP THE TORNADOES! HOLD UP TO AIM HIGH!",
-    "carrotboom": "THROW HIS CARROT BOMBS BACK AT HIM!",
+    "carrotboom": "WHEN HE WATERS HIS CARROTS, BONK HIS BUTT!",
     "scarecrow": "THROW HIS PUMPKINS BACK! ZAP THE CROWS!",
     "pinkfire": "DODGE THE FIRE! HIT HER WHEN SHE RESTS!",
     "moonbunny": "LOOK AT THE MOON...",

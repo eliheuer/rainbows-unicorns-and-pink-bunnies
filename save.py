@@ -12,6 +12,7 @@ def new_save():
         "beaten": [],      # levels you have beaten
         "coins": 0,        # coins you are carrying
         "power": 1,        # lightning power (1-3)
+        "seen_intro": False,  # True after you watch the story at the start
     }
 
 
