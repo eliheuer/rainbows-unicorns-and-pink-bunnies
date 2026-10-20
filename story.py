@@ -255,6 +255,7 @@ class Cutscene:
     def draw(self):
         name, frames, _, lines = self.scene
         getattr(self, "draw_" + name)(self.sf, self.t)
+        pyxel.camera()
         self.draw_parts()
         self.draw_words(lines)
         # fade in and out
@@ -448,6 +449,300 @@ class Intro(Cutscene):
         hero_on_unicorn(x, 80 - f * 0.12, t)
         if f > 60:
             art.big_center(24, "LET'S GO!", [PINK, HOTPINK, YELLOW], 3)
+
+
+# ---------------------------------------------------------------- the mechs!
+
+def shake(on, n=2):
+    if on:
+        pyxel.camera(random.randint(-n, n), random.randint(-n, n))
+
+
+def speed_lines(t, c=WHITE, n=24, down=True):
+    for i in range(n):
+        x = (i * 53) % W
+        y = ((i * 37) + t * 9 * (1 if down else -1)) % (H + 40) - 40
+        pyxel.line(x, y, x, y + 30, c)
+
+
+class MechIntro(Cutscene):
+    SCENES = [
+        ("notyet", 330, None, [
+            (20, "CARROT BOOM:", "YOU THINK YOU WON? NOT... YET!!!"),
+            (190, "", "THE GROUND STARTS TO SHAKE..."),
+        ]),
+        ("rise", 420, sounds.MUSIC_BOSS, [
+            (40, "CARROT BOOM:", "HA HA HA! MEET MY GIANT CARROT MECH!!!"),
+            (260, "", "IT IS AS TALL AS TEN BARNS!"),
+        ]),
+        ("button", 380, sounds.MUSIC_BOSS, [
+            (20, "THE PRESIDENT:", "PINK BUNNY! IT IS TIME..."),
+            (170, "THE PRESIDENT:", "...TIME FOR THE PINK BUNNY MECH!"),
+        ]),
+        ("hangar", 560, sounds.MUSIC_FINAL, [
+            (20, "SYSTEM:", "WARNING! WARNING! LAUNCH SEQUENCE START!"),
+            (210, "PINK BUNNY:", "LET'S DO THIS, MECH!"),
+            (400, "SYSTEM:", "PINK BUNNY MECH IS ONLINE!"),
+        ]),
+        ("launch", 300, sounds.MUSIC_FINAL, [
+            (20, "SYSTEM:", "PINK BUNNY MECH... LAUNCH!!!"),
+        ]),
+        ("faceoff", 500, sounds.MUSIC_FINAL, [
+            (90, "CARROT BOOM:", "YOU AND YOUR LITTLE PINK ROBOT? HA!"),
+            (250, "PINK BUNNY:", "IT IS NOT LITTLE. IT IS PINK POWER!"),
+            (400, "", "FINAL BATTLE: PINK BUNNY MECH VS CARROT MECH!"),
+        ]),
+    ]
+
+    def finish(self):
+        self.app.to_mech()
+
+    # 1. Carrot Boom jumps into the ground
+    def tick_notyet(self, f, t):
+        if 190 < f and t % 6 == 0:
+            self.add(random.uniform(0, W), random.uniform(-10, 0), 0, random.uniform(1, 2), 80,
+                     random.choice([DGRAY, LGRAY, BROWN]), 0.05, "big")
+        if f > 190 and t % 30 == 0:
+            sounds.sfx(sounds.BOOM)
+
+    def draw_notyet(self, f, t):
+        shake(f > 190)
+        sky(DPURPLE, PLUM, 60)
+        stars(t, 30)
+        for x in (30, 200):
+            pyxel.rect(x, 50, 30, 80, LAV)
+            pyxel.circ(x + 15, 50, 15, LAV)
+        pyxel.rect(0, 120, W, 40, DGRAY)
+        pyxel.rect(0, 120, W, 2, LGRAY)
+        art.draw_bunny(40, 100, 1, "stand", 0)
+        if f < 130:
+            art.draw_bunny(140, 80, -1, "hold", t // 4, angry=True, **BUNNY_BOOM, s=2)
+        elif f < 170:
+            k = (f - 130) / 40
+            art.draw_bunny(140, 80 - math.sin(k * math.pi) * 40 + k * 30, -1, "jump", 0,
+                           angry=True, **BUNNY_BOOM, s=2)
+        if f > 160:
+            pyxel.elli(132, 117, 40, 8, BLACK)
+            for k in range(5):
+                pyxel.line(152, 121, 152 + (k - 2) * 30, 121 + (k % 2) * 6, BLACK)
+
+    # 2. The Carrot Mech comes up out of the silo
+    def tick_rise(self, f, t):
+        if f < 260 and t % 4 == 0:
+            self.add(random.uniform(60, 196), 120, random.uniform(-1.5, 1.5), random.uniform(-3, -1),
+                     50, random.choice([DGRAY, BROWN, LGRAY]), 0.1, "big")
+
+    def draw_rise(self, f, t):
+        shake(f < 260, 3)
+        bolt = (t // 6) % 23 == 0
+        pyxel.cls(LAV if bolt else NAVY)
+        stars(t, 30)
+        if bolt:
+            pyxel.line(40, 0, 30, 30, WHITE)
+            pyxel.line(30, 30, 46, 60, WHITE)
+        # the silo opens like a door
+        gap = min(60, f * 0.4)
+        pyxel.rect(98 - gap, 30, 30, 100, LAV)
+        pyxel.rect(128 + gap, 30, 30, 100, LAV)
+        rise = min(1.0, f / 260)
+        art.draw_carrot_mech(128, 240 - rise * 110, 2.1, t, "windup" if f > 280 else "stand",
+                             angry=f > 280)
+        pyxel.rect(0, 130, W, 30, DGRAY)
+        pyxel.rect(0, 130, W, 2, LGRAY)
+        if f > 280 and t % 20 < 10:
+            art.text(170, 40, "HA HA HA!", ORANGE)
+
+    # 3. The President presses the big red button
+    def draw_button(self, f, t):
+        flashing = f > 250 and (t // 10) % 2
+        pyxel.cls(RED if flashing else CREAM)
+        pyxel.rect(0, 0, W, 30, PALETAN)
+        flag_usa(200, 20, t)
+        big_person(70, 30, PEACH, NAVY, LGRAY, RED, f < 250, t)
+        pyxel.rect(0, 100, W, 60, BROWN)
+        pyxel.rect(0, 100, W, 3, DBROWN)
+        # the button, under a glass cover
+        pyxel.rect(150, 96, 50, 10, DGRAY)
+        pressed = f > 250
+        pyxel.elli(158, 86 + (4 if pressed else 0), 34, 16 - (4 if pressed else 0), RED)
+        pyxel.elli(162, 88 + (4 if pressed else 0), 12, 4, PINK)
+        if f < 200:
+            pyxel.rectb(154, 74, 42, 24, SKY)
+        else:
+            pyxel.rectb(154, 56, 42, 20, SKY)
+        # his hand comes down on the button
+        if f > 220:
+            hy = 40 + min(1.0, (f - 220) / 30) * (40 + (4 if pressed else 0))
+            pyxel.rect(170, 0, 10, hy, NAVY)
+            pyxel.elli(166, hy - 2, 18, 12, PEACH)
+        art.text(154, 108, "PINK BUNNY MECH", YELLOW)
+
+    # 4. In the hangar: the bunny climbs in
+    def tick_hangar(self, f, t):
+        if 330 < f < 400 and t % 3 == 0:
+            self.add(128 + random.uniform(-10, 10), 46, random.uniform(-1, 1), random.uniform(-1, 1),
+                     20, random.choice([SKY, WHITE]), 0, "big")
+
+    def draw_hangar(self, f, t):
+        pyxel.cls(BLACK)
+        # red lights that spin around
+        for i, x in enumerate((30, 226)):
+            a = t * 0.1 + i
+            pyxel.tri(x, 20, x + math.cos(a) * 60, 20 + math.sin(a) * 30 + 30,
+                      x + math.cos(a + 0.3) * 60, 20 + math.sin(a + 0.3) * 30 + 30, PLUM)
+            pyxel.circ(x, 20, 5, RED if (t // 10) % 2 else ORANGE)
+        # walls and the dock
+        for x in range(0, W, 32):
+            pyxel.line(x, 0, x, 128, DPURPLE)
+        pyxel.rect(0, 128, W, 32, DGRAY)
+        for k in range(0, W + 16, 16):
+            pyxel.tri(k, 128, k + 8, 128, k, 136, YELLOW)
+        pyxel.rect(0, 136, W, 2, YELLOW)
+        art.draw_pink_mech(128, 128, 1.9, t, eyes=f > 400, pilot=f > 330, flash=380 < f < 400)
+        # the walkway, and the bunny running and jumping in
+        pyxel.rect(0, 74, 92, 4, LGRAY)
+        for k in range(0, 92, 12):
+            pyxel.line(k, 78, k + 6, 128, DGRAY)
+        if f < 330:
+            run = min(1.0, f / 260)
+            bx = -14 + run * 92
+            by = 54
+            if f > 270:
+                k = (f - 270) / 60
+                bx = 78 + k * 44
+                by = 54 - math.sin(k * math.pi) * 30 + k * -6
+            art.draw_bunny(bx, by, 1, "run" if f < 270 else "jump", t // 4)
+        # the computer checks every part
+        lines = [("SYNC", "100%"), ("PINK POWER", "100%"), ("LIGHTNING", "READY"),
+                 ("BUNNY EARS", "UP!")]
+        for i, (k, v) in enumerate(lines):
+            start = 240 + i * 40
+            if f > start:
+                pyxel.rect(160, 14 + i * 10, 92, 9, NAVY)
+                art.text(163, 16 + i * 10, k, SKY)
+                if f > start + 20:
+                    art.text(250 - len(v) * 4, 16 + i * 10, v, YELLOW)
+
+    # 5. Launch!
+    def draw_launch(self, f, t):
+        shake(True, 2)
+        pyxel.cls(NAVY)
+        pyxel.rect(70, 0, 116, H, DPURPLE)
+        speed_lines(t, LAV, 30)
+        for i in range(6):
+            y = (i * 40 + t * 14) % (H + 40) - 20
+            pyxel.rect(70, y, 6, 8, RED if i % 2 else WHITE)
+            pyxel.rect(180, y, 6, 8, RED if i % 2 else WHITE)
+        art.draw_pink_mech(128 + random.randint(-1, 1), 150, 1.6, t, eyes=True)
+        for k in range(8):
+            pyxel.tri(110 + k * 5, 152, 116 + k * 5, 152, 113 + k * 5, 160 + random.randint(0, 10),
+                      YELLOW if k % 2 else ORANGE)
+        if f > 260:
+            pyxel.rect(0, 0, W, H, WHITE)
+
+    # 6. Face to face
+    def tick_faceoff(self, f, t):
+        if 40 < f < 60 and t % 2 == 0:
+            for _ in range(4):
+                self.add(70 + random.uniform(-30, 30), 132, random.uniform(-2, 2), random.uniform(-2, 0),
+                         30, random.choice([LGRAY, WHITE]), 0.1, "big")
+
+    def draw_faceoff(self, f, t):
+        if 200 < f < 380:
+            # close-up of both mechs' eyes, with VS in the middle
+            pyxel.rect(0, 0, W, 66, ORANGE)
+            for x in (40, 150):
+                pyxel.rect(x, 26, 66, 22, RED if t % 20 < 16 else YELLOW)
+                pyxel.line(x - 6, 16, x + 70, 30 if x == 40 else 10, DBROWN)
+            pyxel.rect(0, 66, W, 4, BLACK)
+            pyxel.rect(0, 70, W, 70, WHITE)
+            pyxel.rect(30, 90, 196, 30, SKY if t % 30 < 26 else WHITE)
+            pyxel.rect(40, 96, 60, 6, WHITE)
+            pyxel.rect(100, 46, 56, 38, NAVY)
+            art.big_center(52, "VS", [YELLOW, WHITE], 4)
+            return
+        shake(30 < f < 60, 4)
+        bolt = (t // 5) % 19 == 0
+        pyxel.cls(LAV if bolt else NAVY)
+        stars(t, 30)
+        pyxel.circ(128, 30, 14, CREAM)
+        pyxel.rect(0, 132, W, 28, DGRAY)
+        pyxel.rect(0, 132, W, 2, LGRAY)
+        art.draw_carrot_mech(190, 132, 1.7, t, "stand", angry=True)
+        land = min(1.0, f / 40)
+        art.draw_pink_mech(70, -60 + land * 192, 1.5, t, eyes=True)
+class MechIntro2(Cutscene):
+    """After the Carrot Mech falls, Carrot Boom calls the Tornado Bunny Mech."""
+    SCENES = [
+        ("broken", 330, None, [
+            (20, "CARROT BOOM:", "NO, NO, NO! MY CARROT MECH!"),
+            (170, "CARROT BOOM:", "TORNADO BUNNY! HELP ME!!!"),
+        ]),
+        ("twister", 420, sounds.MUSIC_BOSS, [
+            (40, "", "A GIANT TORNADO COMES DOWN FROM THE SKY..."),
+            (230, "TORNADO BUNNY:", "THE TORNADO BUNNY MECH IS HERE! LET'S SPIN!"),
+        ]),
+        ("power", 380, sounds.MUSIC_FINAL, [
+            (20, "SYSTEM:", "ARMOR FIXED! PINK POWER: MAX!"),
+            (180, "PINK BUNNY:", "TWO MECHS? I CAN STILL DO THIS!"),
+        ]),
+    ]
+
+    def finish(self):
+        self.app.to_mech(3)
+
+    # 1. The Carrot Mech sits there, smoking, and it fixes itself
+    def tick_broken(self, f, t):
+        if t % 5 == 0:
+            self.add(150 + random.uniform(-20, 20), 70, random.uniform(-0.3, 0.3), -0.6, 60,
+                     random.choice([DGRAY, LGRAY]), 0, "big")
+
+    def draw_broken(self, f, t):
+        pyxel.cls(NAVY)
+        stars(t, 30)
+        pyxel.rect(0, 132, W, 28, DGRAY)
+        pyxel.rect(0, 132, W, 2, LGRAY)
+        art.draw_carrot_mech(150, 140, 1.6, t, "dizzy", flash=t % 30 < 3)
+        art.draw_pink_mech(60, 132, 1.3, t)
+        if t % 12 < 6:
+            pyxel.line(130, 90, 136, 84, YELLOW)
+            pyxel.line(166, 100, 172, 106, YELLOW)
+
+    # 2. The Tornado Bunny Mech comes out of a tornado
+    def draw_twister(self, f, t):
+        shake(f < 200, 2)
+        bolt = (t // 6) % 17 == 0
+        pyxel.cls(LAV if bolt else NAVY)
+        stars(t, 20)
+        for i in range(5):
+            art.draw_cloud(i * 60 - 20 + math.sin(t * 0.02 + i) * 6, 6, 2, DGRAY)
+        pyxel.rect(0, 132, W, 28, DGRAY)
+        pyxel.rect(0, 132, W, 2, LGRAY)
+        art.draw_carrot_mech(60, 132, 1.3, t, "stand", angry=True)
+        if f < 200:
+            grow = min(1.0, f / 120)
+            art.draw_tornado(170 - 40 * grow, 20, 80 * grow, 112 * grow + 1, t)
+        else:
+            art.draw_tornado_mech(180, 132, 1.6, t, "spin" if (t // 20) % 2 else "stand", angry=True)
+            if f < 230:
+                pyxel.rect(0, 0, W, H, WHITE)
+
+    # 3. The Pink Bunny Mech powers up again
+    def tick_power(self, f, t):
+        if f < 160 and t % 2 == 0:
+            a = random.uniform(0, math.tau)
+            self.add(128 + math.cos(a) * 60, 80 + math.sin(a) * 60, -math.cos(a) * 1.5,
+                     -math.sin(a) * 1.5, 40, random.choice([PINK, YELLOW, WHITE]), 0, "big")
+
+    def draw_power(self, f, t):
+        pyxel.cls(DPURPLE)
+        speed_lines(t, PLUM, 20, down=False)
+        r = 50 + math.sin(t * 0.2) * 4
+        pyxel.circ(128, 80, r, PLUM)
+        pyxel.circb(128, 80, r, PINK)
+        art.draw_pink_mech(128, 134, 1.6, t, flash=f < 160 and t % 10 < 3)
+        if f > 160:
+            art.big_center(14, "PINK POWER: MAX!", [PINK, YELLOW, WHITE], 2)
 
 
 # ---------------------------------------------------------------- the ending

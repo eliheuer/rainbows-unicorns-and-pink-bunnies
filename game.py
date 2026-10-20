@@ -46,6 +46,7 @@ class Play:
         self.timer = 0
         self.banner_info = None
         self.intro = 0
+        self.mech_wait = 0       # counts down to the mech fight after Carrot Boom
 
         speed = 0.45 + 0.35 * n / 64
         for kind, x, y, extra in self.lv.spawns:
@@ -390,9 +391,14 @@ class Play:
                 self.player.holding = None
             got_back = self.stolen * 2
             self.coins += got_back
-            if self.n == 64:
-                self.banner("YOU BEAT CARROT BOOM!", "ALL THE CARROTS ARE SAFE!", 180)
-            elif boss.beaten_msg:
+            if self.n == LEVEL_COUNT:
+                # Carrot Boom is not done yet: he gets in his giant mech!
+                self.banner("CARROT BOOM: NOT... YET!!!", "THE GROUND IS SHAKING...", 200)
+                self.mech_wait = 200
+                self.app.mech_carry = (self.coins, self.player.power)
+                sounds.music(None)
+                return
+            if boss.beaten_msg:
                 self.banner(*boss.beaten_msg, 180)
             elif got_back:
                 self.banner(f"{boss.name} IS BEATEN!", f"YOU GOT {got_back} COINS BACK!", 150)
@@ -440,6 +446,11 @@ class Play:
             return
         self.t += 1
         self.update_world(hero=True)
+        if self.mech_wait:
+            self.mech_wait -= 1
+            self.shake = max(self.shake, 2)
+            if self.mech_wait == 0:
+                self.app.to_mech_intro()
 
     def update_world(self, hero):
         if self.intro > 0:

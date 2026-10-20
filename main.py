@@ -11,7 +11,8 @@ import save
 import sounds
 from consts import *
 from game import Play
-from story import Ending, Intro
+from mech import MechFight
+from story import Ending, Intro, MechIntro, MechIntro2
 
 TITLE = "Rainbows, Unicorns, and Pink Bunnies"
 
@@ -153,6 +154,7 @@ class App:
         pyxel.colors[:] = PALETTE
         sounds.setup()
         self.save = save.load()
+        self.mech_carry = None    # coins and power to keep, after the mech fight
         self.scene = Title(self)
 
     def run(self):
@@ -178,6 +180,20 @@ class App:
 
     def to_ending(self):
         self.scene = Ending(self)
+
+    def to_mech_intro(self):
+        self.scene = MechIntro(self)
+
+    def to_mech(self, layer=2):
+        self.scene = MechFight(self, layer)
+
+    def to_mech_intro2(self):
+        self.scene = MechIntro2(self)
+
+    def mech_won(self):
+        coins, power = self.mech_carry or (self.save["coins"], self.save["power"])
+        self.level_done(LEVEL_COUNT, 0, coins, power)
+        self.to_ending()
 
     def level_done(self, n, carrots, coins, power):
         sv = self.save

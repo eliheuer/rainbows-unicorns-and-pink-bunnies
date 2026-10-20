@@ -38,7 +38,7 @@ class Pen:
 
     def line(self, x1, y1, x2, y2, c):
         o = (self.s - 1) / 2
-        for d in range(self.s):
+        for d in range(max(1, round(self.s))):
             pyxel.line(self._x(x1) + d, self._y(y1) + o, self._x(x2) + d, self._y(y2) + o, c)
 
     def tri(self, x1, y1, x2, y2, x3, y3, c):
@@ -941,3 +941,162 @@ def draw_goal(x, ground_y, t):
     if t % 20 < 10:
         pyxel.pset(x - 18, ground_y - 30, WHITE)
         pyxel.pset(x + 16, ground_y - 22, YELLOW)
+
+
+# ---------------------------------------------------------------- the giant mechs
+
+def draw_carrot_mech(x, y, s, t, pose="stand", angry=False, flash=False):
+    """Carrot Boom's giant Carrot Mech, seen from the front.
+    (x, y) is the middle of its feet. s is the size: 1 makes it 40x56 pixels.
+    pose is stand, windup (drill up), stuck (drill in the ground) or dizzy."""
+    p = Pen(x - 20 * s, y - 56 * s, 40, 56, s=s)
+    metal, dark = (WHITE, LGRAY) if flash else (LGRAY, DGRAY)
+    body = WHITE if flash else ORANGE
+    # legs and feet
+    p.rect(10, 40, 7, 14, dark)
+    p.rect(23, 40, 7, 14, dark)
+    p.circ(13, 46, 3, body)
+    p.circ(26, 46, 3, body)
+    p.rect(7, 53, 12, 3, BLACK)
+    p.rect(21, 53, 12, 3, BLACK)
+    p.rect(9, 36, 22, 6, dark)
+    # arms: a drill on one side and a carrot cannon on the other
+    p.circ(2, 12, 4, dark)
+    if pose == "windup":
+        p.rect(-2, -6, 6, 18, metal)
+        p.tri(-4, -6, 6, -6, 1, -20, metal)
+        for k in range(3):
+            p.line(-2 + k, -8 - k * 4, 4 - k, -8 - k * 4, dark)
+    elif pose == "stuck":
+        p.rect(-4, 12, 6, 20, metal)
+        p.tri(-6, 32, 4, 32, -1, 46, metal)
+    else:
+        p.rect(-3, 12, 6, 16, metal)
+        p.tri(-5, 28, 5, 28, 0, 40, metal)
+        for k in range(3):
+            p.line(-3 + k, 31 + k * 3, 3 - k, 31 + k * 3, dark)
+    p.circ(38, 12, 4, dark)
+    p.rect(36, 12, 6, 16, metal)
+    p.rect(35, 28, 8, 6, BLACK)
+    p.rect(35, 28, 8, 1, body)
+    # the big carrot body
+    p.elli(2, 2, 36, 14, body)
+    p.tri(2, 9, 38, 9, 20, 44, body)
+    for k in range(4):
+        yy = 18 + k * 6
+        half = 14 - k * 3.5
+        p.line(20 - half, yy, 20 - half + 5, yy, BROWN)
+        p.line(20 + half - 5, yy + 2, 20 + half, yy + 2, BROWN)
+    # leaves on top
+    p.tri(13, 4, 18, 4, 11, -10, GREEN)
+    p.tri(18, 4, 22, 4, 20, -15, GREEN)
+    p.tri(22, 4, 27, 4, 29, -10, GREEN)
+    p.line(20, 3, 20, -12, DGREEN)
+    # glowing eyes
+    glow = YELLOW if (angry and t % 10 < 5) else RED
+    p.rect(8, 6, 7, 3, glow)
+    p.rect(25, 6, 7, 3, glow)
+    p.line(7, 3, 15, 5, DBROWN)
+    p.line(33, 3, 25, 5, DBROWN)
+    # Carrot Boom in his cockpit
+    p.elli(14, 11, 12, 10, NAVY)
+    p.rect(17, 10, 1, 3, WHITE)
+    p.rect(22, 10, 1, 3, WHITE)
+    p.circ(20, 16, 3, WHITE)
+    p.pset(19, 15, RED)
+    p.pset(21, 15, RED)
+    if pose == "dizzy":
+        for i in range(3):
+            a = t * 0.15 + i * 2.1
+            pyxel.circ(x + math.cos(a) * 14 * s, y - 62 * s + math.sin(a) * 3 * s, max(1, s),
+                       YELLOW)
+
+
+def draw_pink_mech(x, y, s, t, eyes=True, pilot=True, flash=False):
+    """The Pink Bunny Mech, seen from the front.
+    (x, y) is the middle of its feet. s is the size: 1 makes it 36x60 pixels."""
+    p = Pen(x - 18 * s, y - 60 * s, 36, 60, s=s)
+    white = WHITE if not flash else CREAM
+    # legs and feet
+    p.rect(9, 40, 7, 16, white)
+    p.rect(20, 40, 7, 16, white)
+    p.circ(12, 46, 3, PINK)
+    p.circ(23, 46, 3, PINK)
+    p.rect(6, 56, 12, 4, HOTPINK)
+    p.rect(18, 56, 12, 4, HOTPINK)
+    p.rect(8, 36, 20, 6, LGRAY)
+    # arms and fists
+    p.rect(-1, 22, 7, 16, white)
+    p.rect(30, 22, 7, 16, white)
+    p.circ(2, 40, 4, PINK)
+    p.circ(33, 40, 4, PINK)
+    # body, shoulders and the lightning bolt
+    p.elli(4, 16, 28, 24, white)
+    p.circ(3, 20, 6, PINK)
+    p.circ(33, 20, 6, PINK)
+    p.tri(19, 27, 14, 34, 18, 34, YELLOW)
+    p.tri(18, 33, 22, 33, 16, 40, YELLOW)
+    # cockpit window
+    p.circ(18, 23, 4, SKY)
+    if pilot:
+        p.circ(18, 24, 2, PINK)
+        p.rect(17, 19, 1, 3, PINK)
+        p.rect(19, 19, 1, 3, PINK)
+    # head with bunny ears and a visor
+    p.elli(11, -14, 5, 19, white)
+    p.elli(20, -14, 5, 19, white)
+    p.rect(12, -11, 3, 13, PINK)
+    p.rect(21, -11, 3, 13, PINK)
+    p.elli(10, 3, 16, 14, white)
+    p.rect(12, 8, 12, 4, (SKY if t % 30 < 26 else WHITE) if eyes else NAVY)
+    if eyes:
+        p.rect(13, 9, 3, 1, WHITE)
+
+
+def draw_tornado_mech(x, y, s, t, pose="stand", angry=False, flash=False):
+    """The Tornado Bunny Mech. It has a spinning tornado where its legs should be.
+    (x, y) is the bottom of the tornado. s is the size: 1 makes it 40x56 pixels.
+    pose is stand, spin (arms out) or dizzy."""
+    p = Pen(x - 20 * s, y - 56 * s, 40, 56, s=s)
+    body = WHITE if flash else HOTPINK
+    # the tornado
+    for i in range(7):
+        ww = 6 + i * 4
+        sway = math.sin(t * 0.3 + i) * 2
+        c = [LGRAY, WHITE, LAV][(i + t // 3) % 3]
+        p.elli(20 - ww / 2 + sway, 52 - i * 3, ww, 5, c)
+    # arms
+    if pose == "spin":
+        p.rect(-12, 18, 18, 5, body)
+        p.rect(34, 18, 18, 5, body)
+        p.circ(-12, 20, 3, LPINK)
+        p.circ(52, 20, 3, LPINK)
+    else:
+        p.rect(0, 18, 6, 14, body)
+        p.rect(34, 18, 6, 14, body)
+        p.circ(3, 33, 3, LPINK)
+        p.circ(37, 33, 3, LPINK)
+    # body with a cockpit
+    p.elli(6, 14, 28, 24, body)
+    p.circ(5, 18, 5, PURPLE)
+    p.circ(35, 18, 5, PURPLE)
+    p.elli(12, 21, 16, 14, LPINK)
+    p.circ(20, 27, 4, NAVY)
+    p.circ(20, 28, 2, HOTPINK)
+    p.pset(19, 27, PURPLE)
+    p.pset(21, 27, PURPLE)
+    # head, ears and visor
+    p.elli(12, -16, 5, 18, body)
+    p.elli(23, -16, 5, 18, body)
+    p.rect(13, -13, 3, 12, PURPLE)
+    p.rect(24, -13, 3, 12, PURPLE)
+    p.elli(11, 0, 18, 15, body)
+    p.rect(13, 5, 14, 4, YELLOW if (angry and t % 10 < 5) else PURPLE)
+    p.rect(14, 6, 3, 1, WHITE)
+    p.line(12, 3, 18, 5, BLACK)
+    p.line(28, 3, 22, 5, BLACK)
+    if pose == "dizzy":
+        for i in range(3):
+            a = t * 0.15 + i * 2.1
+            pyxel.circ(x + math.cos(a) * 14 * s, y - 62 * s + math.sin(a) * 3 * s, max(1, s),
+                       YELLOW)

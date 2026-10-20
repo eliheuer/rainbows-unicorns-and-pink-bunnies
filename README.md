@@ -109,7 +109,34 @@ it gets angry and attacks faster.
 | 40 | The Scarecrow | He sends packs of crows and throws pumpkins. Throw the pumpkins back at him. |
 | 48 | The Pink Fireball | She fills the sky with fire in spirals, waves, and rings. Hit her when she rests low. |
 | 56 | The Moon Bunny | From the game Bunny Madness. When she swoops down, zap her moon rocks. Then she hides and hops. Watch her shadow and throw things at her. Then jump on her helmet. |
-| 64 | Carrot Boom | He has 5 moves: carrot bombs, a tornado dance, hide and seek under the ground, a little Tornado Bunny that dives at you (zap it two times), and garden time. When he waters his carrots, his butt is in the air. Hit it to do double damage! If you are hurt, a heart falls after each move. |
+| 64 | Carrot Boom | He has 5 moves: carrot bombs, a tornado dance, hide and seek under the ground, a little Tornado Bunny that dives at you (zap it two times), and garden time. When he waters his carrots, his butt is in the air. Hit it to do double damage! If you are hurt, a heart falls after each move. Then he gets in his giant Carrot Mech, and then he calls the Tornado Bunny Mech! |
+
+## The mech fights
+
+Carrot Boom has 3 layers:
+
+1. Carrot Boom himself.
+2. The Carrot Mech. The pink bunny gets in the Pink Bunny Mech, and you fight
+   from inside the cockpit.
+3. The Carrot Mech and the Tornado Bunny Mech together. They take turns to
+   attack, and the one that waits shoots at you too.
+
+| Key | What it does |
+|---|---|
+| Left and Right | Step to another lane, to dodge |
+| Z or Space | Punch |
+| X | Lightning beam. It uses ZAP power, which comes back. |
+
+Red marks on the ground show where a mech will hit. Step out of the red lane.
+Shoot carrot missiles and tornadoes with the lightning beam. You can hurt a
+mech only when it is stuck or dizzy:
+
+- After a drill punch, the Carrot Mech's drill is stuck in the ground.
+- After a charge that misses you, the Carrot Mech is dizzy.
+- After a sky slam, the Tornado Bunny Mech is dizzy.
+
+Step into its lane and punch it. If your mech goes down, you only do that
+mech fight again. When you beat both mechs, the game is over.
 
 ## Change the game
 
@@ -119,7 +146,8 @@ it gets angry and attacks faster.
 | `game.py` | What happens in a level |
 | `entities.py` | The bunny, pigs, items, and power-ups. Speed and jump numbers are at the top. |
 | `bosses.py` | The bosses |
-| `story.py` | The movie at the start and the ending |
+| `story.py` | The movie at the start, the mech movies, and the ending |
+| `mech.py` | The mech fights. The numbers to change are at the top. |
 | `levels.py` | How the levels are built, the worlds, and the boss list |
 | `art.py` | How everything looks |
 | `sounds.py` | Sound effects and music |
