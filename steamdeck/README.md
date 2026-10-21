@@ -34,3 +34,14 @@ cd rainbows-unicorns-and-pink-bunnies
 
 The D-pad moves, A jumps, X zaps, Start pauses, and the Select button goes back.
 Progress saves to `save.json` in the game folder.
+
+## The quick way, over SSH
+
+`steamdeck/install_steam.py` does the "Add it to Steam" part for you, with
+library art drawn by `steamdeck/make_art.py`. On the Deck, with Steam closed:
+
+```sh
+steam -shutdown
+cd ~/Games/rainbows-unicorns-and-pink-bunnies && uv run steamdeck/install_steam.py
+steam &
+```
