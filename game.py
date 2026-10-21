@@ -247,7 +247,7 @@ class Play:
                 b.dead = True
                 return
         for s in self.shots:
-            if not s.dead and s.kind in ("paw", "tornado", "fire", "rock") and overlap(b, s):
+            if not s.dead and s.kind in ("paw", "tornado", "fire", "rock", "moonrock") and overlap(b, s):
                 s.dead = True
                 b.dead = True
                 self.puff(s.x + s.w / 2, s.y + s.h / 2, WHITE)

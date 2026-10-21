@@ -69,12 +69,12 @@ ENEMIES = [
     {"walk": 2, "charge": 2, "corn": 4, "fly": 2},          # Corn Maze
     {"walk": 2, "charge": 1, "jack": 4, "crow": 3},         # Pumpkin Patch
     {"walk": 1, "fly": 3, "flame": 5},                      # Rainbow Clouds
-    {"walk": 3, "charge": 2, "bat": 4},                     # Moonlight Farm
+    {"walk": 2, "charge": 1, "bat": 3, "moon": 3, "minimoon": 3},   # Moonlight Farm
     {"walk": 2, "charge": 2, "fly": 1, "carrotbomb": 4},    # Carrot Boom's Silo
 ]
 
 # How many tiles above the ground the flying enemies float.
-AIR_HEIGHT = {"fly": 4, "crow": 6, "bat": 6, "flame": 3}
+AIR_HEIGHT = {"fly": 4, "crow": 6, "bat": 6, "flame": 3, "moon": 4}
 
 
 def pick(rnd, weights):

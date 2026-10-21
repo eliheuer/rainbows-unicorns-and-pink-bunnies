@@ -316,11 +316,13 @@ class Pig:
     """Every small enemy: pigs, and the other critters that live in each world.
 
     kind is one of: walk, charge, fly (pigs), apple, rooster, corn, jack,
-    crow, bat, flame, carrotbomb.
+    crow, bat, flame, carrotbomb, moon (a little crescent moon that drifts by),
+    minimoon (a mini Moon Bunny with a red moon, that hops and throws moon rocks).
     """
     SIZES = {"corn": (10, 14), "flame": (10, 12), "rooster": (12, 12),
-             "apple": (10, 10), "carrotbomb": (10, 12), "jack": (12, 11)}
-    FLYERS = ("fly", "crow", "bat", "flame")
+             "apple": (10, 10), "carrotbomb": (10, 12), "jack": (12, 11),
+             "moon": (10, 10), "minimoon": (8, 8)}
+    FLYERS = ("fly", "crow", "bat", "flame", "moon")
     CHOMPERS = ("walk", "charge", "fly", "crow", "bat", "rooster")   # these eat carrots
 
     def __init__(self, x, y, kind, speed):
@@ -362,6 +364,8 @@ class Pig:
             self.crow(g)
         elif self.kind == "flame":
             self.flame(g)
+        elif self.kind == "moon":
+            self.moon(g)
         elif self.kind == "fly":
             if g.move_x(self, self.vx) or abs(self.x - self.home_x) > 48:
                 self.vx = -self.vx
@@ -422,6 +426,17 @@ class Pig:
             speed = 0.3
             if self.on_ground and self.t % 90 == 0:
                 self.vy = -4
+        elif k == "minimoon":
+            # a mini Moon Bunny: it does one slow moon walk hop toward you,
+            # and when it lands it throws a moon rock
+            speed = 0.6 if not self.on_ground else 0
+            self.cool -= 1
+            if self.on_ground and self.cool <= 0 and abs(dx) < 150 and abs(p.y - self.y) < 60:
+                self.dir = sign(dx) or self.dir
+                self.vy = -2.2
+                self.cool = 110
+            if not self.on_ground:
+                self.dir = sign(dx) or self.dir
         elif k == "carrotbomb":
             if self.fuse:
                 speed = 0
@@ -441,11 +456,18 @@ class Pig:
             fx = self.x + self.w + 1 if self.dir > 0 else self.x - 1
             if g.tile_at(fx, self.y + self.h + 2) not in "#B=":
                 self.dir = -self.dir
-        self.vy = min(self.vy + GRAVITY, MAX_FALL)
+        grav = GRAVITY * 0.35 if k == "minimoon" else GRAVITY    # moon walk: low gravity
+        self.vy = min(self.vy + grav, MAX_FALL)
         was = self.on_ground
         self.on_ground = g.move_y(self, self.vy) == "floor"
         if self.on_ground:
             self.vy = 0
+            if k == "minimoon" and not was and abs(dx) < 150:
+                # it landed: throw a moon rock at you
+                aim = clamp(dx / 60, -1.6, 1.6)
+                g.shots.append(Shot("moonrock", self.x + 1, self.y - 2, 6, 6, aim, -2.2, 0.12, 240))
+                g.float_text(self.x + 4, self.y - 8, "MOON ROCK!", RED)
+                sounds.sfx(sounds.THROW)
             if k == "corn" and not was:
                 # POP! hot popcorn flies up
                 for d in (-1, 1):
@@ -454,6 +476,16 @@ class Pig:
                 sounds.sfx(sounds.POOF)
         if self.y > H:
             self.dead = True
+
+    def moon(self, g):
+        """A little crescent moon. It drifts slowly one way, bobbing, and turns at walls."""
+        self.vx = self.dir * self.speed * 0.5
+        if g.move_x(self, self.vx) or abs(self.x - self.home_x) > 70:
+            self.dir = -self.dir
+            self.x += self.dir * 2
+        old = self.y
+        self.y = self.base_y + math.sin(self.t * 0.04) * 6
+        self.vy = self.y - old
 
     def flame(self, g):
         """Little pink flames float in waves and spit pink fire."""
@@ -774,10 +806,10 @@ class Shot:
         else:
             self.x += self.vx
             self.y += self.vy
-            if self.kind in ("fire", "rock", "popcorn") and g.rect_solid(self.x, self.y, self.w, self.h):
+            if self.kind in ("fire", "rock", "moonrock", "popcorn") and g.rect_solid(self.x, self.y, self.w, self.h):
                 self.dead = True
-                if self.kind == "rock":
-                    g.puff(self.x + self.w / 2, self.y + self.h, LAV)
+                if self.kind in ("rock", "moonrock"):
+                    g.puff(self.x + self.w / 2, self.y + self.h, LAV if self.kind == "rock" else RED)
                     sounds.sfx(sounds.BOUNCE)
         if self.x < -30 or self.x > g.width * T + 30 or self.y > H + 30:
             self.dead = True
@@ -817,6 +849,11 @@ class Shot:
             pyxel.circ(x + 3, y + 3, 3, LAV)
             pyxel.circb(x + 3, y + 3, 3, SKY)
             pyxel.pset(x + 2, y + 2, WHITE)
+        elif self.kind == "moonrock":
+            # a little red moon rock
+            pyxel.circ(x + 3, y + 3, 3, RED)
+            pyxel.circb(x + 3, y + 3, 3, HOTPINK)
+            pyxel.pset(x + 2, y + 2, PINK)
 
 
 class Particle:

@@ -80,7 +80,7 @@ its own enemies.
 | 25-32 | Corn Maze | Popcorn cobs hop and pop hot popcorn into the air. |
 | 33-40 | Pumpkin Patch | Jack-o'-lanterns hop at you. Crows dive at you. |
 | 41-48 | Rainbow Clouds | Little pink flames float and shoot pink fire. Pigs fly here. |
-| 49-56 | Moonlight Farm | Bats dive at you. |
+| 49-56 | Moonlight Farm | Bats dive at you. Little crescent moons drift by. Mini Moon Bunnies hop in slow motion and throw red moon rocks. |
 | 57-64 | Carrot Boom's Silo | Walking carrot bombs light their fuse when you get close. Pick one up and throw it! |
 
 If you keep running fast, you get super speed, like Sonic. With super speed,

@@ -345,6 +345,10 @@ def draw_critter(x, y, facing, frame, kind="walk", chomp=0, flipv=False, lit=0):
         draw_flame(x, y, frame * 4, flipv)
     elif kind == "carrotbomb":
         draw_walking_bomb(x, y, facing, frame, lit, flipv)
+    elif kind == "moon":
+        draw_little_moon(x, y, facing, frame, flipv)
+    elif kind == "minimoon":
+        draw_moon_bunny(x, y, facing, 1, RED_MOON_COLORS)
     else:
         draw_pig(x, y, facing, frame, kind, chomp, flipv)
 
@@ -698,14 +702,28 @@ MOON_BUNNY = [
     "07700770",
 ]
 MOON_COLORS = {"7": WHITE, "6": SKY, "c": BLUE}
+RED_MOON_COLORS = {"7": RED, "6": HOTPINK, "c": WHITE}     # the mini Moon Bunny
 
 
-def draw_moon_bunny(x, y, facing, scale=4):
+def draw_moon_bunny(x, y, facing, scale=4, colors=MOON_COLORS):
     for py, row in enumerate(MOON_BUNNY):
         for px, ch in enumerate(row):
             if ch != "0":
                 dx = px if facing > 0 else 7 - px
-                pyxel.rect(x + dx * scale, y + py * scale, scale, scale, MOON_COLORS[ch])
+                pyxel.rect(x + dx * scale, y + py * scale, scale, scale, colors[ch])
+
+
+def draw_little_moon(x, y, facing, frame, flipv=False):
+    """A little crescent moon, like a fingernail, in a 10x10 box. It has a sleepy face."""
+    p = Pen(x, y, 10, 10, flip=facing < 0, flipv=flipv)
+    # the crescent: inside the big circle but outside a circle pushed to one side
+    for py in range(10):
+        for px in range(10):
+            dx, dy = px - 4.5, py - 4.5
+            if dx * dx + dy * dy <= 25 and (dx + 3) ** 2 + dy * dy > 16:
+                p.pset(px, py, CREAM if (px + py + frame) % 5 else YELLOW)
+    p.pset(8, 3, BLACK if frame % 20 < 17 else CREAM)       # eye, it blinks
+    p.pset(7, 6, HOTPINK)                                   # a smile
 
 
 def draw_cloud(x, y, size=1, c=WHITE):

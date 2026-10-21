@@ -26,13 +26,14 @@ LANE = 3          # how wide one lane is
 NEAR, FAR = 5.0, 7.5
 
 # TRY CHANGING THESE NUMBERS!
-ARMOR = 8         # how many hits the Pink Bunny Mech can take
-CARROT_HP = 48    # the Carrot Mech's health when it fights alone
-TEAM_HP = 30      # each mech's health when the two fight together
-PUNCH = 3         # damage of one punch
-ZAP = 1           # damage of one lightning beam
-ZAP_COST = 25     # ZAP power one beam uses (you have 100)
-SUPPORT = 180     # with two mechs, how often the waiting one shoots at you
+ARMOR = 10        # how many hits the Pink Bunny Mech can take
+CARROT_HP = 28    # the Carrot Mech's health when it fights alone
+TEAM_HP = 16      # each mech's health when the two fight together
+PUNCH = 4         # damage of one punch
+ZAP = 2           # damage of one lightning beam
+ZAP_COST = 20     # ZAP power one beam uses (you have 100)
+SUPPORT = 300     # with two mechs, how often the waiting one shoots at you
+OPEN_TIME = 150   # how long a mech stays stuck or dizzy, so you can punch it
 
 
 def sx(wx, z, cam):
@@ -78,7 +79,7 @@ class Mech:
 
     @property
     def fury(self):
-        return 1.3 if self.angry else 1.0
+        return 1.15 if self.angry else 1.0
 
     @property
     def move(self):
@@ -212,7 +213,7 @@ class CarrotMech(Mech):
                 self.pose = "windup"
         elif self.step == "windup":
             if self.ptimer <= 0:
-                self.step, self.ptimer = "stuck", 100
+                self.step, self.ptimer = "stuck", OPEN_TIME
                 self.pose = "stuck"
                 f.shake = 10
                 sounds.sfx(sounds.BOOM)
@@ -273,13 +274,11 @@ class CarrotMech(Mech):
             if self.ez < 3.2:
                 self.danger = []
                 if f.lane == self.strike:
-                    # it hit you, so it walks back, happy
                     f.ouch()
-                    self.done()
-                    return
+                # it crashes into you or the ground, and gets dizzy either way
                 self.say("WHOA! IT IS DIZZY! PUNCH!", YELLOW, 60)
                 self.ez = max(self.ez, 3.6)
-                self.step, self.ptimer = "dizzy", 110
+                self.step, self.ptimer = "dizzy", OPEN_TIME
                 self.pose = "dizzy"
         elif self.step == "dizzy":
             self.ez += (NEAR - self.ez) * 0.05
@@ -346,7 +345,7 @@ class TornadoMech(Mech):
                 if f.lane == self.strike:
                     f.ouch()
                 self.say("IT IS DIZZY! PUNCH!", YELLOW, 60)
-                self.step, self.ptimer = "dizzy", 110
+                self.step, self.ptimer = "dizzy", OPEN_TIME
                 self.pose = "dizzy"
         elif self.step == "dizzy":
             if self.ptimer <= 0:
