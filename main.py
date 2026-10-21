@@ -3,6 +3,7 @@
 # Run it with:   uv run main.py
 # Add --fullscreen to fill the whole screen (for the Steam Deck or a TV).
 
+import ctypes
 import sys
 
 import pyxel
@@ -151,11 +152,23 @@ class Select:
         art.center_text(153, "ESC: TITLE", LAV)
 
 
+def hide_screen_keyboard():
+    """SDL turns on text input when it opens a window, and the Steam Deck answers
+    by popping up its on-screen keyboard. The game never types, so turn it off."""
+    if not sys.platform.startswith("linux"):
+        return
+    try:
+        ctypes.CDLL("libSDL2-2.0.so.0").SDL_StopTextInput()
+    except (OSError, AttributeError):
+        pass
+
+
 class App:
     def __init__(self):
         pyxel.init(W, H, title=TITLE, fps=60, quit_key=pyxel.KEY_NONE)
         if "--fullscreen" in sys.argv:
             pyxel.fullscreen(True)
+        hide_screen_keyboard()
         pyxel.colors[:] = PALETTE
         sounds.setup()
         self.save = save.load()
