@@ -34,10 +34,10 @@ To get the newest version of the game, run `git pull` in the game folder.
 
 | Key | Gamepad | What it does |
 |---|---|---|
-| Arrows or WASD | D-pad | Run and climb vines |
+| Arrows or WASD | D-pad or left stick | Run and climb vines |
 | Z or Space | A | Jump |
-| X | X | Lightning zap. Hold Up to zap up high. |
-| C | B | Pull up a plant, pick up a pig, or throw what you carry |
+| X | B | Lightning zap. Hold Up to zap up high. |
+| C | X or Y | Pull up a plant, pick up a pig, or throw what you carry |
 | Down, then jump | Down, then A | Super jump. Hold Down until the bunny flashes. |
 | Enter or Esc | Start | Pause |
 
@@ -123,9 +123,9 @@ Carrot Boom has 3 layers:
 
 | Key | What it does |
 |---|---|
-| Left and Right | Step to another lane, to dodge |
-| Z or Space | Punch |
-| X | Lightning beam. It uses ZAP power, which comes back. |
+| Left and Right, or the stick | Step to another lane, to dodge |
+| Z or Space, or A | Punch |
+| X, or B | Lightning beam. It uses ZAP power, which comes back. |
 
 Red marks on the ground show where a mech will hit. Step out of the red lane.
 Shoot carrot missiles and tornadoes with the lightning beam. You can hurt a

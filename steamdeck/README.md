@@ -32,7 +32,8 @@ cd rainbows-unicorns-and-pink-bunnies
 4. Under **Controller**, pick the **Gamepad** layout if it is not already on.
 5. Go back to Gaming Mode. The game is in your library under **Non-Steam**.
 
-The D-pad moves, A jumps, X zaps, Start pauses, and the Select button goes back.
+The D-pad or the left stick moves, A jumps, B zaps, X or Y grabs, Start pauses,
+and the Select button goes back.
 Progress saves to `save.json` in the game folder.
 
 ## The quick way, over SSH
