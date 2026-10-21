@@ -1,6 +1,9 @@
 # Rainbows, Unicorns, and Pink Bunnies
 #
 # Run it with:   uv run main.py
+# Add --fullscreen to fill the whole screen (for the Steam Deck or a TV).
+
+import sys
 
 import pyxel
 
@@ -151,6 +154,8 @@ class Select:
 class App:
     def __init__(self):
         pyxel.init(W, H, title=TITLE, fps=60, quit_key=pyxel.KEY_NONE)
+        if "--fullscreen" in sys.argv:
+            pyxel.fullscreen(True)
         pyxel.colors[:] = PALETTE
         sounds.setup()
         self.save = save.load()
