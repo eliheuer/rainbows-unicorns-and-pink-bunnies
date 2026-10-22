@@ -117,12 +117,14 @@ class MoneyCat(Boss):
     waving paw, and a gold greedy beam from the big coin he holds. Between attacks he rests. That is
     when you throw things at him!"""
     name = "MONEY CAT"
+    # He is the first boss, so he starts easy: only the first two moves.
+    # When he gets angry he shows all four.
     PATTERNS = ["coins", "beam", "ring", "greedy"]
     SHOUTS = {"coins": "LASER COINS!", "beam": "LUCKY BEAM!", "ring": "COIN RING!",
               "greedy": "GREEDY BEAM!"}
 
     def __init__(self, g, x, hard):
-        super().__init__(g, x, hard, 26 if hard else 18, 28, 30)
+        super().__init__(g, x, hard, 20 if hard else 10, 28, 30)
         self.wave = 0.0
         self.state = "warn"
         self.timer = 50
@@ -134,7 +136,8 @@ class MoneyCat(Boss):
 
     @property
     def pattern(self):
-        return self.PATTERNS[self.n % len(self.PATTERNS)]
+        moves = self.PATTERNS if self.angry or self.hard else self.PATTERNS[:2]
+        return moves[self.n % len(moves)]
 
     def paw(self):
         """Where his raised, waving paw is."""
@@ -146,7 +149,7 @@ class MoneyCat(Boss):
         dx = 24 if self.facing > 0 else 7
         return self.x - 2 + dx, self.y - 4 + 25
 
-    def laser_coin(self, x, y, angle, speed=2.4):
+    def laser_coin(self, x, y, angle, speed=2.0):
         s = Shot("lasercoin", x - 3, y - 3, 6, 6,
                  math.cos(angle) * speed, math.sin(angle) * speed, 0, 400)
         s.bx, s.by = s.x, s.y
@@ -167,11 +170,11 @@ class MoneyCat(Boss):
         if self.state == "warn":
             if self.timer <= 0:
                 self.state = "fire"
-                self.timer = {"coins": 150, "beam": 0, "ring": 130, "greedy": 0}[self.pattern]
+                self.timer = {"coins": 110, "beam": 0, "ring": 90, "greedy": 0}[self.pattern]
                 self.rings = 0
                 g.float_text(self.cx, self.y - 30, self.SHOUTS[self.pattern], GOLD)
                 if self.pattern == "beam":
-                    self.beams_left = 2 if self.angry or self.hard else 1
+                    self.beams_left = 2 if self.hard else 1
                     self.start_beam("lucky")
                 elif self.pattern == "greedy":
                     self.start_beam("greedy")
@@ -191,22 +194,22 @@ class MoneyCat(Boss):
         # ---- firing
         pat = self.pattern
         if pat == "coins":
-            every = 14 if self.angry else 20
+            every = 18 if self.angry else 26
             if self.timer % every == 0:
                 px, py = self.paw()
                 aim = math.atan2(p.y + p.h / 2 - py, p.cx - px)
-                spread = (-0.3, 0, 0.3) if self.angry or self.hard else (0,)
+                spread = (-0.3, 0, 0.3) if self.hard else (0,)
                 for off in spread:
                     self.laser_coin(px, py, aim + off)
                 sounds.sfx(sounds.ZAP)
         elif pat == "ring":
             if self.timer % 40 == 0:
                 self.rings += 1
-                n = 14 if self.angry else 10
+                n = 10 if self.angry else 8
                 off = (self.rings % 2) * math.pi / n
                 cx, cy = self.cx, self.y + 12
                 for k in range(n):
-                    self.laser_coin(cx, cy, off + k * math.tau / n, 1.3)
+                    self.laser_coin(cx, cy, off + k * math.tau / n, 1.1)
                 sounds.sfx(sounds.COIN)
         elif self.beam:
             self.update_beam()
@@ -216,7 +219,7 @@ class MoneyCat(Boss):
 
     def rest(self):
         self.state = "rest"
-        self.timer = 75 if self.angry else 105
+        self.timer = 110 if self.angry else 150
         self.beam = None
         self.g.float_text(self.cx, self.y - 30, "PURR...", LPINK)
 
@@ -269,8 +272,8 @@ class MoneyCat(Boss):
                 self.rest()
 
     def took_coins(self, n):
-        """Every 5 coins he takes heals him a little."""
-        if n:
+        """Every 5 coins he takes heals him a little (only in the hard levels)."""
+        if n and self.hard:
             self.hp = min(self.max_hp, self.hp + max(1, n // 5))
             self.g.float_text(self.cx, self.y - 16, "MORE MONEY, MORE POWER!", GOLD)
 
@@ -364,7 +367,7 @@ class Eggbert(Boss):
             self.shots_fired += 1
             fire_turn = 3 if (self.hard or self.angry) else 4
             if self.shots_fired % fire_turn == 0:
-                self.burst = 4 if self.angry else 3
+                self.burst = 3 if self.angry else 2
             else:
                 self.spit_egg(mouth_x)
                 if self.angry:
